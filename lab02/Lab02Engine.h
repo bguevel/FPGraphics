@@ -89,6 +89,20 @@ protected:
  float getTerrainHeight(float x, float z) const;
 
 private:
+ CSCI441::ShaderProgram* _terrainShaderProgram = nullptr;
+
+ // Uniform and attribute locations for the terrain shader
+ struct TerrainShaderUniformLocations {
+  GLint mvpMatrix;
+  GLint normalMatrix;
+ } _terrainShaderUniformLocations;
+
+ struct TerrainShaderAttributeLocations {
+  GLint vPos;
+  GLint vNormal;
+ } _terrainShaderAttributeLocations;
+
+ GLuint _heightMapTexture;
  GLuint _terrainVAO, _terrainVBO, _terrainIBO;
  std::vector<float> terrainVertices;
  std::vector<unsigned int> terrainIndices;

@@ -80,6 +80,16 @@ void Lab02Engine::mSetupShaders() {
     _lightingShaderAttributeLocations.vNorm = _lightingShaderProgram->getAttributeLocation("vertexnorm");
     CSCI441::setVertexAttributeLocations(_lightingShaderAttributeLocations.vPos,_lightingShaderAttributeLocations.vNorm);
 
+    _terrainShaderProgram = new CSCI441::ShaderProgram("shaders/height.v.glsl", "shaders/height.f.glsl");
+
+    // Get uniform locations for terrain shader
+    _terrainShaderUniformLocations.mvpMatrix = _terrainShaderProgram->getUniformLocation("mvpMatrix");
+    _terrainShaderUniformLocations.normalMatrix = _terrainShaderProgram->getUniformLocation("normalMatrix");
+
+    // Get attribute locations for terrain shader
+    _terrainShaderAttributeLocations.vPos = _terrainShaderProgram->getAttributeLocation("vPos");
+    _terrainShaderAttributeLocations.vNormal = _terrainShaderProgram->getAttributeLocation("vNormal");
+
 }
 
 void Lab02Engine::mSetupBuffers() {
@@ -216,10 +226,25 @@ void Lab02Engine::_computeAndSendMatrixUniforms(glm::mat4 modelMtx, glm::mat4 vi
 }
 void Lab02Engine::_renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) const {
 
+    _terrainShaderProgram->useProgram();
+
+    // Compute matrices for the terrain
+    glm::mat4 modelMtxTerrain = glm::mat4(1.0f);
+    glm::mat4 mvpMtxTerrain = projMtx * viewMtx * modelMtxTerrain;
+    glm::mat3 normalMtxTerrain = glm::mat3(glm::transpose(glm::inverse(modelMtxTerrain)));
+
+    // Send matrices to the terrain shader
+    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.mvpMatrix, mvpMtxTerrain);
+    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.normalMatrix, normalMtxTerrain);
+
+    // Bind and draw the terrain
+    glBindVertexArray(_terrainVAO);
+    glDrawElements(GL_TRIANGLES, terrainIndices.size(), GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+
     _lightingShaderProgram->useProgram();
 
     // draw the ground plane terrain
-    glm::mat4 modelMtxTerrain = glm::mat4(1.0f); // Adjust if you want to position the terrain differently
     _computeAndSendMatrixUniforms(modelMtxTerrain, viewMtx, projMtx);
 
     // Set material color for terrain
@@ -423,13 +448,12 @@ void Lab02Engine::_createGroundBuffers() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _terrainIBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, terrainIndices.size() * sizeof(unsigned int), terrainIndices.data(), GL_STATIC_DRAW);
 
-    // Vertex Positions
-    glEnableVertexAttribArray(_lightingShaderAttributeLocations.vPos);
-    glVertexAttribPointer(_lightingShaderAttributeLocations.vPos, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    // Use terrain shader attribute locations
+    glEnableVertexAttribArray(_terrainShaderAttributeLocations.vPos);
+    glVertexAttribPointer(_terrainShaderAttributeLocations.vPos, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
 
-    // Vertex Normals
-    glEnableVertexAttribArray(_lightingShaderAttributeLocations.vNorm);
-    glVertexAttribPointer(_lightingShaderAttributeLocations.vNorm, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(_terrainShaderAttributeLocations.vNormal);
+    glVertexAttribPointer(_terrainShaderAttributeLocations.vNormal, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
 
     glBindVertexArray(0);
 }
@@ -449,7 +473,7 @@ void Lab02Engine::calculateTerrainNormals() {
 
         glm::vec3 edge1 = v1 - v0;
         glm::vec3 edge2 = v2 - v0;
-        glm::vec3 normal = glm::normalize(glm::cross(edge1, edge2));
+        glm::vec3 normal = glm::normalize(glm::cross(edge2, edge1));
 
         normals[idx0] += normal;
         normals[idx1] += normal;
