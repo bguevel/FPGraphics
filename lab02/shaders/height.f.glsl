@@ -70,15 +70,15 @@ void main() {
     if(theta > spotLightOuterCutoff) {
         // Diffuse component for spotlight
         float diffSpot = max(dot(normalizedNormal, lightToFrag), 0.0);
-        vec3 diffuseSpot = diffSpot * light_color * materialColor;
+        vec3 diffuseSpot =  light_color * materialColor;
 
         // Specular component for spotlight
         vec3 reflectSpot = reflect(-lightToFrag, normalizedNormal);
         float specSpot = pow(max(dot(viewDir, reflectSpot), 0.0), shininess);
-        vec3 specularSpot = specStrength * specSpot * light_color;
+        vec3 specularSpot = specStrength * light_color;
 
         // Add spotlight contributions with intensity
-        finalColor = vec3(1.0,0.0,0.0);
+        finalColor += diffuseSpot + specularSpot;
     }
 
     // Ensure final color doesn't exceed 1.0
