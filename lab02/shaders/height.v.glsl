@@ -8,6 +8,7 @@ uniform mat3 normalMatrix;       // Normal matrix (transpose of inverse of model
 uniform sampler2D heightMap;     // Height map texture
 uniform float maxHeight;         // Maximum height displacement
 uniform vec2 texelSize;          // Size of one texel (1.0 / texture dimensions)
+uniform vec3 cameraPosition;     // Camera position in world space
 
 // Attributes
 layout(location = 0) in vec3 vPos;      // Vertex position
@@ -17,6 +18,7 @@ layout(location = 2) in vec2 vTexCoord; // Vertex texture coordinate
 // Varyings
 out vec3 fragPosition;    // World-space position of the fragment
 out vec3 fragNormal;      // World-space normal of the fragment
+out vec3 viewDir;         // Direction from fragment to camera
 
 void main() {
     // Sample height from the height map using texture coordinates
@@ -46,6 +48,9 @@ void main() {
 
     // Transform the normal to world space using the normal matrix
     fragNormal = normalize(normalMatrix * computedNormal);
+
+    // Compute the view direction (from fragment to camera)
+    viewDir = normalize(cameraPosition - fragPosition);
 
     // Compute the final vertex position in clip space
     gl_Position = mvpMatrix * worldPos;

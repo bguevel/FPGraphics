@@ -98,10 +98,10 @@ void Lab02Engine::mSetupShaders() {
     _terrainShaderUniformLocations.camPosition         = _terrainShaderProgram->getUniformLocation("cameraPosition");
     _terrainShaderUniformLocations.lightColor          = _terrainShaderProgram->getUniformLocation("light_color");
     _terrainShaderUniformLocations.lightPosition       = _terrainShaderProgram->getUniformLocation("light_direction");
-    _terrainShaderUniformLocations.spotLightPosition   = _terrainShaderProgram->getUniformLocation("spotLight_position");
-    _terrainShaderUniformLocations.spotLightDirection  = _terrainShaderProgram->getUniformLocation("spotLight_direction");
-    _terrainShaderUniformLocations.spotLightCutoff     = _terrainShaderProgram->getUniformLocation("spotLight_cutoff");
-    _terrainShaderUniformLocations.spotLightOuterCutoff= _terrainShaderProgram->getUniformLocation("spotLight_outerCutoff");
+    _terrainShaderUniformLocations.spotLightPosition   = _terrainShaderProgram->getUniformLocation("spotLightPosition");
+    _terrainShaderUniformLocations.spotLightDirection  = _terrainShaderProgram->getUniformLocation("spotLightDirection");
+    _terrainShaderUniformLocations.spotLightCutoff     = _terrainShaderProgram->getUniformLocation("spotLightCutoff");
+    _terrainShaderUniformLocations.spotLightOuterCutoff= _terrainShaderProgram->getUniformLocation("spotLightOuterCutoff");
     _terrainShaderUniformLocations.texelSize = _terrainShaderProgram->getUniformLocation("texelSize");
     // Terrain Shader Attributes
     _terrainShaderAttributeLocations.vPos      = _terrainShaderProgram->getAttributeLocation("vPos");
@@ -146,10 +146,10 @@ void Lab02Engine::mSetupScene() {
 
     //******************************************************************
     glm::vec3 beingPosition = _pPlane->getPosition(); // Assuming _pPlane is the Being
-    glm::vec3 spotLightPosition = glm::vec3(0.0f,5.0f,0.0f); // Spotlight above the Being
+    glm::vec3 spotLightPosition = glm::vec3(0.0f,30.0f,0.0f); // Spotlight above the Being
     glm::vec3 spotLightDirection = glm::vec3(0.0f,-1.0f,0.0f);
     GLfloat spotLightCutoff      = glm::cos( glm::radians( 40.0f ) );
-    GLfloat spotLightOuterCutoff = glm::cos( glm::radians( 90.0f ) );
+    GLfloat spotLightOuterCutoff = glm::cos( glm::radians( 70.0f ) );
     glm::vec3 cameraPos = _pFreeCam->getPosition();
 
     glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.spotLightPosition, 1, glm::value_ptr( spotLightPosition ) );

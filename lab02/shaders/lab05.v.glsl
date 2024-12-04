@@ -1,40 +1,35 @@
 #version 410 core
 
-// uniform inputs
-uniform mat4 mvpMatrix;                 // the precomputed Model-View-Projection Matrix
-// TODO #D: add normal matrix
-uniform mat3 mtxNormal; //should this be a uniform
+// Uniform inputs
+uniform mat4 mvpMatrix;
+uniform mat3 mtxNormal;
 uniform mat4 modelMatrix;
 
 // Spot light uniforms
 uniform vec3 spotLightPosition;
 uniform vec3 spotLightDirection;
+uniform float spotLightCutoff;
+uniform float spotLightOuterCutoff;
 
-uniform float spotLightCutoff;      // Cosine of the inner cutoff angle
-uniform float spotLightOuterCutoff; // Cosine of the outer cutoff angle
-
-//uniform vec3 cameraDirection;
+// Camera position
 uniform vec3 cameraPosition;
 
-
-// TODO #A: add light uniforms
+// Light uniforms
 uniform vec3 light_direction;
 uniform vec3 light_color;
 
+// Material color
+uniform vec3 materialColor;
 
-uniform vec3 materialColor;             // the material color for our vertex (& whole object)
-
-// attribute inputs
-layout(location = 0) in vec3 vPos;      // the position of this specific vertex in object space
-// TODO #C: add vertex normal
+// Attribute inputs
+layout(location = 0) in vec3 vPos;
 layout(location = 1) in vec3 vertexnorm;
 
-// varying outputs
-layout(location = 0) out vec3 color;    // color to apply to this vertex
-
+// Varying outputs
+layout(location = 0) out vec3 color;
 
 void main() {
-    // Transform & output the vertex in clip space
+    // Transform vertex position to clip space
     gl_Position = mvpMatrix * vec4(vPos, 1.0);
 
     // Transform position to world space
@@ -55,7 +50,7 @@ void main() {
 
     // Compute distance and attenuation
     float distance = length(spotLightPosition - worldPos);
-    float attenuation = 1.0 / (0.05 + 0.09 * distance + 0.032 * distance * distance);
+    float attenuation = 1.0 ;
 
     // Compute eye direction
     vec3 eyeDirection = normalize(cameraPosition - worldPos);
@@ -76,8 +71,8 @@ void main() {
     float specularFactor = pow(max(dot(reflection, eyeDirection), 0.0), shininess);
     vec3 specular = specularFactor * light_color;
 
-    // Initialize color with directional light components
-    vec3 color = ambient + diffuse + specular;
+    // Initial color from directional light
+    vec3 finalColor = ambient + diffuse + specular;
 
     // Spotlight diffuse component
     float diffuseFactor2 = max(dot(transformedNormal, lightToVertex), 0.0);
@@ -99,7 +94,9 @@ void main() {
         specular2 = vec3(0.0, 0.0, 0.0);
     }
 
-    // Add spotlight contributions to the color
-    color = diffuse2 + specular2 + ambient;
+    // Accumulate spotlight contributions
+    finalColor += diffuse2 + specular2;
 
+    // Output the final color
+    color = finalColor;
 }
