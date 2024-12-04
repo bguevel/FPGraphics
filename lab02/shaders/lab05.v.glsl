@@ -50,7 +50,7 @@ void main() {
 
     // Compute distance and attenuation
     float distance = length(spotLightPosition - worldPos);
-    float attenuation = 1.0 ;
+    float attenuation = 1.0 / (1.0 + 0.00005 * distance + 0.0001 * distance * distance);
 
     // Compute eye direction
     vec3 eyeDirection = normalize(cameraPosition - worldPos);
@@ -87,8 +87,8 @@ void main() {
     // Apply spotlight intensity and attenuation
     if (myTheta >= spotLightOuterCutoff) {
         spotIntensity *= attenuation;
-        diffuse2  *= spotIntensity;
-        specular2 *= spotIntensity;
+        diffuse2  *= spotIntensity*20;
+        specular2 *= spotIntensity*20;
     } else {
         diffuse2  = vec3(0.0, 0.0, 0.0);
         specular2 = vec3(0.0, 0.0, 0.0);
