@@ -89,19 +89,41 @@ protected:
  float getTerrainHeight(float x, float z) const;
 
 private:
+ float _centerX;
+ float _centerZ;
  CSCI441::ShaderProgram* _terrainShaderProgram = nullptr;
 
  // Uniform and attribute locations for the terrain shader
  struct TerrainShaderUniformLocations {
   GLint mvpMatrix;
   GLint normalMatrix;
- } _terrainShaderUniformLocations;
 
+  GLint materialColor;
+  GLint modelMatrix;
+  // TODO #1: add new uniforms
+  GLint lightPosition;
+  GLint lightColor;
+  GLint ViewMtx;
+  GLint camPosition;
+
+  GLint spotLightPosition;
+  GLint spotLightDirection;
+  GLint spotLightCutoff;
+  GLint spotLightOuterCutoff;
+
+  GLint heightMap;
+  GLint maxHeight;
+  GLint texelSizeX;
+  GLint texelSizeY;
+
+
+ } _terrainShaderUniformLocations;
+ GLuint _heightMapTextureID;
  struct TerrainShaderAttributeLocations {
   GLint vPos;
   GLint vNormal;
+  GLint vTexCoord;
  } _terrainShaderAttributeLocations;
-
  GLuint _heightMapTexture;
  GLuint _terrainVAO, _terrainVBO, _terrainIBO;
  std::vector<float> terrainVertices;
@@ -116,12 +138,18 @@ private:
   GLint mvpMatrix;
   /// \desc material diffuse color location
   GLint materialColor;
+  GLint modelMatrix;
   // TODO #1: add new uniforms
   GLint vNormalMatrix;
   GLint lightPosition;
   GLint lightColor;
   GLint ViewMtx;
   GLint camPosition;
+
+  GLint spotLightPosition;
+  GLint spotLightDirection;
+  GLint spotLightCutoff;
+  GLint spotLightOuterCutoff;
 
  } _lightingShaderUniformLocations;
  struct LightingShaderAttributeLocations {

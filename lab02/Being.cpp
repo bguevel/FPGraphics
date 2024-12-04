@@ -72,7 +72,6 @@ void Being::update() {
 }
 
 void Being::drawPerson( glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx ) {
-    modelMtx = glm::translate(modelMtx, _position);
 
     modelMtx = glm::rotate(modelMtx, float(toRotate-M_PI/2), glm::vec3(0.0f, 1.0f, 0.0f));
 

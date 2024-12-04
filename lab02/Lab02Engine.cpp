@@ -74,8 +74,14 @@ void Lab02Engine::mSetupShaders() {
     _lightingShaderUniformLocations.lightPosition = _lightingShaderProgram->getUniformLocation("light_direction");
     _lightingShaderAttributeLocations.vPos         = _lightingShaderProgram->getAttributeLocation("vPos");
     _lightingShaderUniformLocations.vNormalMatrix = _lightingShaderProgram->getUniformLocation("mtxNormal");
-    _lightingShaderUniformLocations.ViewMtx = _lightingShaderProgram->getUniformLocation("view_mtx");
-    _lightingShaderUniformLocations.camPosition = _lightingShaderProgram->getUniformLocation("cam_position");
+
+    _lightingShaderUniformLocations.modelMatrix    = _lightingShaderProgram->getUniformLocation( "modelMatrix" );
+    _lightingShaderUniformLocations.camPosition = _lightingShaderProgram->getUniformLocation("cameraPosition");
+
+    _lightingShaderUniformLocations.spotLightCutoff      = _lightingShaderProgram->getUniformLocation( "spotLightCutoff" );
+    _lightingShaderUniformLocations.spotLightDirection   = _lightingShaderProgram->getUniformLocation( "spotLightDirection" );
+    _lightingShaderUniformLocations.spotLightPosition    = _lightingShaderProgram->getUniformLocation( "spotLightPosition" );
+    _lightingShaderUniformLocations.spotLightOuterCutoff = _lightingShaderProgram->getUniformLocation( "spotLightOuterCutoff" );
     // TODO #3B: assign attributes
     _lightingShaderAttributeLocations.vNorm = _lightingShaderProgram->getAttributeLocation("vertexnorm");
     CSCI441::setVertexAttributeLocations(_lightingShaderAttributeLocations.vPos,_lightingShaderAttributeLocations.vNorm);
@@ -83,16 +89,29 @@ void Lab02Engine::mSetupShaders() {
     _terrainShaderProgram = new CSCI441::ShaderProgram("shaders/height.v.glsl", "shaders/height.f.glsl");
 
     // Get uniform locations for terrain shader
-    _terrainShaderUniformLocations.mvpMatrix = _terrainShaderProgram->getUniformLocation("mvpMatrix");
-    _terrainShaderUniformLocations.normalMatrix = _terrainShaderProgram->getUniformLocation("normalMatrix");
+    _terrainShaderUniformLocations.mvpMatrix      = _terrainShaderProgram->getUniformLocation("mvpMatrix");
+    _terrainShaderUniformLocations.modelMatrix    = _terrainShaderProgram->getUniformLocation("modelMatrix");
+    _terrainShaderUniformLocations.heightMap      = _terrainShaderProgram->getUniformLocation("heightMap");
+    _terrainShaderUniformLocations.maxHeight      = _terrainShaderProgram->getUniformLocation("maxHeight");
+    //_terrainShaderUniformLocations.texelSizeX     = _terrainShaderProgram->getUniformLocation("texelSizeX");
+    //_terrainShaderUniformLocations.texelSizeY     = _terrainShaderProgram->getUniformLocation("texelSizeY");
+    _terrainShaderUniformLocations.camPosition    = _terrainShaderProgram->getUniformLocation("cameraPosition");
+    _terrainShaderUniformLocations.lightColor     = _terrainShaderProgram->getUniformLocation("light_color");
+    _terrainShaderUniformLocations.materialColor  = _terrainShaderProgram->getUniformLocation("materialColor");
+    _terrainShaderUniformLocations.lightPosition  = _terrainShaderProgram->getUniformLocation("light_direction");
+
+    // Terrain Shader Attributes
+    _terrainShaderAttributeLocations.vPos         = _terrainShaderProgram->getAttributeLocation("vPos");
+    _terrainShaderAttributeLocations.vTexCoord    = _terrainShaderProgram->getAttributeLocation("vTexCoord");
 
     // Get attribute locations for terrain shader
-    _terrainShaderAttributeLocations.vPos = _terrainShaderProgram->getAttributeLocation("vPos");
-    _terrainShaderAttributeLocations.vNormal = _terrainShaderProgram->getAttributeLocation("vNormal");
+    //_terrainShaderAttributeLocations.vNormal = _terrainShaderProgram->getAttributeLocation("vNormal");
+
 
 }
 
 void Lab02Engine::mSetupBuffers() {
+    maxHeight = 10.0f;
     // Initialize the plane (assuming this is part of your scene)
     _pPlane = new Being(_lightingShaderProgram->getShaderProgramHandle(),
                         _lightingShaderUniformLocations.mvpMatrix,
@@ -127,7 +146,37 @@ void Lab02Engine::mSetupScene() {
     glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle(), _lightingShaderUniformLocations.lightPosition, 1, glm::value_ptr(lightDirection));
 
     //******************************************************************
-    // Define corner positions (offset from the edges)
+    glm::vec3 beingPosition = _pPlane->getPosition(); // Assuming _pPlane is the Being
+    glm::vec3 spotLightPosition = glm::vec3(0.0f,5.0f,0.0f); // Spotlight above the Being
+    glm::vec3 spotLightDirection = glm::vec3(0.0f,-1.0f,0.0f);
+    GLfloat spotLightCutoff      = glm::cos( glm::radians( 40.0f ) );
+    GLfloat spotLightOuterCutoff = glm::cos( glm::radians( 90.0f ) );
+    glm::vec3 cameraPos = _pFreeCam->getPosition();
+
+
+    glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.spotLightPosition, 1, glm::value_ptr( spotLightPosition ) );
+
+    glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.spotLightDirection, 1, glm::value_ptr( spotLightDirection ) );
+
+    glProgramUniform1f( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.spotLightOuterCutoff, spotLightOuterCutoff );
+
+    glProgramUniform1f( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.spotLightCutoff, spotLightCutoff );
+
+    glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.spotLightPosition, 1, glm::value_ptr(spotLightPosition));
+    glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.spotLightDirection, 1, glm::value_ptr(spotLightDirection));
+    glProgramUniform1f(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.spotLightOuterCutoff, spotLightOuterCutoff);
+    glProgramUniform1f(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.spotLightCutoff, spotLightCutoff);
+
+    glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.lightPosition, 1, glm::value_ptr(lightDirection));
+    // Pass general lighting data
+    glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.lightColor, 1, glm::value_ptr(lightColor));
+    glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.camPosition, 1, glm::value_ptr(_pFreeCam->getPosition()));
+
+    printf("Directional Light Color: (%f, %f, %f)\n", lightColor.x, lightColor.y,lightColor.z);
+    printf("Directional Light Direction: (%f, %f, %f)\n", lightDirection.x, lightDirection.y, lightDirection.z);
+    printf("Spotlight Position: (%f, %f, %f)\n", spotLightPosition.x, spotLightPosition.y, spotLightPosition.z);
+    printf("Spotlight Direction: (%f, %f, %f)\n", spotLightDirection.x, spotLightDirection.y, spotLightDirection.z);
+    printf("Spotlight Cutoffs: Inner %f, Outer %f\n", spotLightCutoff, spotLightOuterCutoff);
 
 }
 bool Lab02Engine::loadHeightMap(const std::string& filepath) {
@@ -137,6 +186,21 @@ bool Lab02Engine::loadHeightMap(const std::string& filepath) {
         return false;
     }
 
+    // Create OpenGL texture
+    glGenTextures(1, &_heightMapTextureID);
+    glBindTexture(GL_TEXTURE_2D, _heightMapTextureID);
+
+    // Set texture parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // Upload texture data
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, heightMapWidth, heightMapHeight, 0, GL_RED, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    // Populate heightData for CPU-side height queries
     heightData.resize(heightMapWidth * heightMapHeight);
     for(int i = 0; i < heightMapWidth * heightMapHeight; ++i){
         heightData[i] = static_cast<float>(data[i]) / 255.0f * maxHeight;
@@ -145,11 +209,11 @@ bool Lab02Engine::loadHeightMap(const std::string& filepath) {
     stbi_image_free(data);
     return true;
 }
+
 float Lab02Engine::getTerrainHeight(float x, float z) const {
-    // Assuming terrain starts at (0,0)
-    // If terrain is centered or offset, adjust x and z accordingly
-    float terrainX = x;
-    float terrainZ = z;
+    // Map world coordinates to heightmap coordinates
+    float terrainX = x + _centerX;
+    float terrainZ = z + _centerZ;
 
     // Clamp the coordinates to the height map boundaries
     if (terrainX < 0.0f) terrainX = 0.0f;
@@ -212,55 +276,53 @@ void Lab02Engine::_generateEnvironment() {
 //
 // Rendering / Drawing Functions - this is where the magic happens!
 void Lab02Engine::_computeAndSendMatrixUniforms(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) const {
-    // Compute the Model-View-Projection matrix
+    _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.modelMatrix, modelMtx);
     glm::mat4 mvpMtx = projMtx * viewMtx * modelMtx;
     _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.mvpMatrix, mvpMtx);
-
-    // Compute and send the normal matrix
     glm::mat3 normalMtx = glm::mat3(glm::transpose(glm::inverse(modelMtx)));
     _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.vNormalMatrix, normalMtx);
+    // Set camera position uniform
+    _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.camPosition, _pFreeCam->getPosition());
 
-    // **Correctly compute and send the model-view matrix**
-    glm::mat4 modelViewMtx = viewMtx * modelMtx;
-    _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.ViewMtx, modelViewMtx);
+    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.mvpMatrix, mvpMtx);
+    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.camPosition, _pFreeCam->getPosition());
+    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.modelMatrix, modelMtx);
 }
-void Lab02Engine::_renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) const {
 
+void Lab02Engine::_renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) const {
     _terrainShaderProgram->useProgram();
 
-    // Compute matrices for the terrain
+    // Bind heightmap texture
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, _heightMapTextureID);
+    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.heightMap, 0);
+
+    // Set uniforms
+    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.maxHeight, maxHeight);
+    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.texelSizeX, 1.0f / heightMapWidth);
+    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.texelSizeY, 1.0f / heightMapHeight);
+
+    // Set matrices
     glm::mat4 modelMtxTerrain = glm::mat4(1.0f);
-    glm::mat4 mvpMtxTerrain = projMtx * viewMtx * modelMtxTerrain;
-    glm::mat3 normalMtxTerrain = glm::mat3(glm::transpose(glm::inverse(modelMtxTerrain)));
-
-    // Send matrices to the terrain shader
-    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.mvpMatrix, mvpMtxTerrain);
-    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.normalMatrix, normalMtxTerrain);
-
-    // Bind and draw the terrain
-    glBindVertexArray(_terrainVAO);
-    glDrawElements(GL_TRIANGLES, terrainIndices.size(), GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
-
-    _lightingShaderProgram->useProgram();
-
-    // draw the ground plane terrain
     _computeAndSendMatrixUniforms(modelMtxTerrain, viewMtx, projMtx);
 
-    // Set material color for terrain
-    glm::vec3 terrainColor = glm::vec3(0.3f, 0.8f, 0.3f); // Greenish color
-    _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.materialColor, terrainColor);
-
-    // Bind and draw terrain
+    // Draw the terrain
     glBindVertexArray(_terrainVAO);
     glDrawElements(GL_TRIANGLES, terrainIndices.size(), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 
-    // we are going to cheat and use our look at point to place our plane so that it is always in view
-    glm::mat4 modelMtx2(1.0f);
+    // 2. Draw Plane with Lighting Shader
+    _lightingShaderProgram->useProgram();
+
+    // Compute and send matrix uniforms for lighting shader
+    glm::mat4 modelMtxPlane = glm::mat4(1.0f);
+    glm::vec3 planePos = _pPlane->getPosition();
+    printf("Plane Position: (%f, %f, %f)\n", planePos.x, planePos.y, planePos.z);
+    modelMtxPlane = glm::translate(modelMtxPlane, _pPlane->getPosition());
+    _computeAndSendMatrixUniforms(modelMtxPlane, viewMtx, projMtx);
 
     // Draw the plane
-    _pPlane->drawPerson(modelMtx2, viewMtx, projMtx);
+    _pPlane->drawPerson(modelMtxPlane, viewMtx, projMtx);
 
 }
 void Lab02Engine::_updateScene(){
@@ -272,9 +334,11 @@ void Lab02Engine::_updateScene(){
 
     // Define an offset to keep the plane above the terrain
     float heightOffset = 0.5f; // Adjust as needed for your simulation
-
+    //printf("Terrain Height: %f\n", terrainHeight);
+    //printf("Plane Height: %f\n", planePos.y);
     // Ensure the plane stays above the terrain
     if (planePos.y < terrainHeight + heightOffset) {
+
         planePos.y = terrainHeight + heightOffset;
         _pPlane->setPosition(planePos);
     }
@@ -393,28 +457,51 @@ void Lab02Engine::handleCursorPositionEvent(glm::vec2 currMousePosition) {
     _mousePosition = currMousePosition;
 }
 void Lab02Engine::_createGroundBuffers() {
-// Define scaling factors
-    float scaleX = 1.0f; // Adjust to scale terrain width
-    float scaleZ = 1.0f; // Adjust to scale terrain depth
+    // Define scaling factors
+    float scaleX = 1.0f; // Adjust as needed
+    float scaleZ = 1.0f; // Adjust as needed
+
+    _centerX = (heightMapWidth - 1) * scaleX / 2.0f;
+    _centerZ = (heightMapHeight - 1) * scaleZ / 2.0f;
 
     // Generate vertices
-    for(int z = 0; z < heightMapHeight; ++z){
-        for(int x = 0; x < heightMapWidth; ++x){
-            float y = heightData[z * heightMapWidth + x];
-            terrainVertices.push_back(x * scaleX); // X
-            terrainVertices.push_back(y);          // Y
-            terrainVertices.push_back(z * scaleZ); // Z
+    for (int z = 0; z < heightMapHeight; ++z) {
+        for (int x = 0; x < heightMapWidth; ++x) {
+            float y = 0.0f; // Height will be computed in the vertex shader
+            float posX = x * scaleX - _centerX;
+            float posZ = z * scaleZ - _centerZ;
+            terrainVertices.push_back(posX); // X
+            terrainVertices.push_back(y);     // Y
+            terrainVertices.push_back(posZ); // Z
 
-            // Placeholder normals (to be calculated later)
+            // Placeholder normal
             terrainVertices.push_back(0.0f); // Normal X
             terrainVertices.push_back(1.0f); // Normal Y
             terrainVertices.push_back(0.0f); // Normal Z
+
+            // Texture coordinates
+            float u = (float)x / (heightMapWidth - 1);
+            float v = (float)z / (heightMapHeight - 1);
+            terrainVertices.push_back(u);
+            terrainVertices.push_back(v);
         }
     }
 
-    // Generate indices for triangle strips
+    // Generate indices for triangle strips, skipping central hole
     for(int z = 0; z < heightMapHeight - 1; ++z){
         for(int x = 0; x < heightMapWidth - 1; ++x){
+            // Calculate positions for current quad
+            float posX0 = x * scaleX - _centerX;
+            float posZ0 = z * scaleZ - _centerZ;
+            float posX1 = (x + 1) * scaleX - _centerX;
+            float posZ1 = (z + 1) * scaleZ - _centerZ;
+
+            // Compute distance from center for the quad's center
+            float centerQuadX = (posX0 + posX1) / 2.0f;
+            float centerQuadZ = (posZ0 + posZ1) / 2.0f;
+            float distQuadCenter = sqrt(centerQuadX * centerQuadX + centerQuadZ * centerQuadZ);
+
+            // Generate indices for the quad
             int topLeft = z * heightMapWidth + x;
             int topRight = topLeft + 1;
             int bottomLeft = (z + 1) * heightMapWidth + x;
@@ -437,55 +524,100 @@ void Lab02Engine::_createGroundBuffers() {
 
     // Create and upload buffers
     glGenVertexArrays(1, &_terrainVAO);
-    glGenBuffers(1, &_terrainVBO);
-    glGenBuffers(1, &_terrainIBO);
-
     glBindVertexArray(_terrainVAO);
 
+    glGenBuffers(1, &_terrainVBO);
     glBindBuffer(GL_ARRAY_BUFFER, _terrainVBO);
     glBufferData(GL_ARRAY_BUFFER, terrainVertices.size() * sizeof(float), terrainVertices.data(), GL_STATIC_DRAW);
 
+    glGenBuffers(1, &_terrainIBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _terrainIBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, terrainIndices.size() * sizeof(unsigned int), terrainIndices.data(), GL_STATIC_DRAW);
 
-    // Use terrain shader attribute locations
-    glEnableVertexAttribArray(_terrainShaderAttributeLocations.vPos);
-    glVertexAttribPointer(_terrainShaderAttributeLocations.vPos, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    // Set attribute pointers while VAO is bound
+    const GLsizei stride = 8 * sizeof(float); // Correct stride for 8 floats per vertex
 
-    glEnableVertexAttribArray(_terrainShaderAttributeLocations.vNormal);
-    glVertexAttribPointer(_terrainShaderAttributeLocations.vNormal, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    // Position attribute
+    glEnableVertexAttribArray(_terrainShaderAttributeLocations.vPos);
+    glVertexAttribPointer(
+        _terrainShaderAttributeLocations.vPos,
+        3,              // size (x, y, z)
+        GL_FLOAT,       // type
+        GL_FALSE,       // normalized?
+        stride,         // stride
+        (void*)0        // array buffer offset
+    );
+
+    // Texture Coordinate attribute
+    glEnableVertexAttribArray(_terrainShaderAttributeLocations.vTexCoord);
+    glVertexAttribPointer(
+        _terrainShaderAttributeLocations.vTexCoord,
+        2,              // size (u, v)
+        GL_FLOAT,
+        GL_FALSE,
+        stride,
+        (void*)(6 * sizeof(float)) // Offset after positions (3 floats) and normals (3 floats)
+    );
 
     glBindVertexArray(0);
 }
+
 void Lab02Engine::calculateTerrainNormals() {
-    // Initialize normals to zero
-    std::vector<glm::vec3> normals(heightMapWidth * heightMapHeight, glm::vec3(0.0f, 0.0f, 0.0f));
+    // Initialize normals array
+    std::vector<glm::vec3> normals(heightMapWidth * heightMapHeight, glm::vec3(0.0f));
 
-    // Iterate over each triangle and compute normals
-    for(size_t i = 0; i < terrainIndices.size(); i += 3){
-        unsigned int idx0 = terrainIndices[i];
-        unsigned int idx1 = terrainIndices[i + 1];
-        unsigned int idx2 = terrainIndices[i + 2];
+    // Iterate over each triangle in the terrain
+    for (int z = 0; z < heightMapHeight - 1; ++z) {
+        for (int x = 0; x < heightMapWidth - 1; ++x) {
+            // Define vertices of the two triangles in the grid cell
+            int topLeft = z * heightMapWidth + x;
+            int topRight = z * heightMapWidth + (x + 1);
+            int bottomLeft = (z + 1) * heightMapWidth + x;
+            int bottomRight = (z + 1) * heightMapWidth + (x + 1);
 
-        glm::vec3 v0(terrainVertices[idx0 * 6 + 0], terrainVertices[idx0 * 6 + 1], terrainVertices[idx0 * 6 + 2]);
-        glm::vec3 v1(terrainVertices[idx1 * 6 + 0], terrainVertices[idx1 * 6 + 1], terrainVertices[idx1 * 6 + 2]);
-        glm::vec3 v2(terrainVertices[idx2 * 6 + 0], terrainVertices[idx2 * 6 + 1], terrainVertices[idx2 * 6 + 2]);
+            // First Triangle (topLeft, bottomLeft, topRight)
+            glm::vec3 v0 = glm::vec3(terrainVertices[topLeft * 8 + 0],
+                                     terrainVertices[topLeft * 8 + 1],
+                                     terrainVertices[topLeft * 8 + 2]);
+            glm::vec3 v1 = glm::vec3(terrainVertices[bottomLeft * 8 + 0],
+                                     terrainVertices[bottomLeft * 8 + 1],
+                                     terrainVertices[bottomLeft * 8 + 2]);
+            glm::vec3 v2 = glm::vec3(terrainVertices[topRight * 8 + 0],
+                                     terrainVertices[topRight * 8 + 1],
+                                     terrainVertices[topRight * 8 + 2]);
 
-        glm::vec3 edge1 = v1 - v0;
-        glm::vec3 edge2 = v2 - v0;
-        glm::vec3 normal = glm::normalize(glm::cross(edge2, edge1));
+            glm::vec3 edge1 = v1 - v0;
+            glm::vec3 edge2 = v2 - v0;
+            glm::vec3 faceNormal = glm::normalize(glm::cross(edge1, edge2));
 
-        normals[idx0] += normal;
-        normals[idx1] += normal;
-        normals[idx2] += normal;
+            // Accumulate normals for each vertex
+            normals[topLeft] += faceNormal;
+            normals[bottomLeft] += faceNormal;
+            normals[topRight] += faceNormal;
+
+            // Second Triangle (bottomLeft, bottomRight, topRight)
+            glm::vec3 v3 = glm::vec3(terrainVertices[bottomRight * 8 + 0],
+                                     terrainVertices[bottomRight * 8 + 1],
+                                     terrainVertices[bottomRight * 8 + 2]);
+
+            glm::vec3 edge3 = v3 - v1;
+            glm::vec3 edge4 = v2 - v1;
+            glm::vec3 faceNormal2 = glm::normalize(glm::cross(edge3, edge4));
+
+            // Accumulate normals for each vertex
+            normals[bottomLeft] += faceNormal2;
+            normals[bottomRight] += faceNormal2;
+            normals[topRight] += faceNormal2;
+        }
     }
 
-    // Normalize the normals
-    for(int i = 0; i < heightMapWidth * heightMapHeight; ++i){
-        glm::vec3 n = glm::normalize(normals[i]);
-        terrainVertices[i * 6 + 3] = n.x;
-        terrainVertices[i * 6 + 4] = n.y;
-        terrainVertices[i * 6 + 5] = n.z;
+    // Normalize the accumulated normals
+    for (int i = 0; i < normals.size(); ++i) {
+        normals[i] = glm::normalize(normals[i]);
+        // Corrected indexing: stride is 8 floats
+        terrainVertices[i * 8 + 3] = normals[i].x;
+        terrainVertices[i * 8 + 4] = normals[i].y;
+        terrainVertices[i * 8 + 5] = normals[i].z;
     }
 
     // Update VBO with new normals
@@ -493,6 +625,9 @@ void Lab02Engine::calculateTerrainNormals() {
     glBufferSubData(GL_ARRAY_BUFFER, 0, terrainVertices.size() * sizeof(float), terrainVertices.data());
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
+
+
+
 void Lab02Engine::run() {
     printf("\nControls:\n");
     printf("\tW A S D - forwards, backwards, and side to side for the character in the world\n");
@@ -522,12 +657,12 @@ void Lab02Engine::run() {
         // i.e. what gets seen - use a perspective projection that ranges
         // with a FOV of 45 degrees, for our current aspect ratio, and Z ranges from [0.001, 1000].
         glm::mat4 projMtx = glm::perspective( 45.0f, (GLfloat)mWindowWidth / (GLfloat)mWindowHeight, 0.001f, 1000.0f );
-        CSCI441::SimpleShader3::setProjectionMatrix(projMtx);
+       // CSCI441::SimpleShader3::setProjectionMatrix(projMtx);
 
         // set up our look at matrix to position our camera
         glm::mat4 viewMtx = _pFreeCam->getViewMatrix();
         // multiply by the look at matrix - this is the same as our view matrix
-        CSCI441::SimpleShader3::setViewMatrix(viewMtx);
+        //CSCI441::SimpleShader3::setViewMatrix(viewMtx);
 
         _renderScene(_pFreeCam->getViewMatrix(), _pFreeCam->getProjectionMatrix());					// draw everything to the window
         _updateScene();
