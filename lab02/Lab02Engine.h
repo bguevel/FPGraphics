@@ -94,35 +94,31 @@ private:
  CSCI441::ShaderProgram* _terrainShaderProgram = nullptr;
 
  // Uniform and attribute locations for the terrain shader
+
+ GLuint _heightMapTextureID;
  struct TerrainShaderUniformLocations {
   GLint mvpMatrix;
-  GLint normalMatrix;
-
-  GLint materialColor;
   GLint modelMatrix;
-  // TODO #1: add new uniforms
-  GLint lightPosition;
-  GLint lightColor;
-  GLint ViewMtx;
+  GLint normalMatrix;
+  GLint heightMap;
+  GLint maxHeight;
+  GLint materialColor;
   GLint camPosition;
-
+  GLint lightColor;
+  GLint lightPosition;
   GLint spotLightPosition;
   GLint spotLightDirection;
   GLint spotLightCutoff;
   GLint spotLightOuterCutoff;
-
-  GLint heightMap;
-  GLint maxHeight;
-  GLint texelSizeX;
-  GLint texelSizeY;
-
-
+  GLint texelSize; // Add this line
+  // Add any other uniforms if needed
  } _terrainShaderUniformLocations;
- GLuint _heightMapTextureID;
+
  struct TerrainShaderAttributeLocations {
   GLint vPos;
   GLint vNormal;
   GLint vTexCoord;
+  // Add any other attributes if needed
  } _terrainShaderAttributeLocations;
  GLuint _heightMapTexture;
  GLuint _terrainVAO, _terrainVBO, _terrainIBO;

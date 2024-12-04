@@ -64,7 +64,7 @@ void main() {
     vec3 lightVector = normalize(-light_direction);
 
     // Ambient component
-    vec3 ambient = 0.2 * light_color * materialColor;
+    vec3 ambient = 0.6 * light_color * materialColor;
 
     // Diffuse component for directional light
     float diffuseFactor = max(dot(transformedNormal, lightVector), 0.0);
@@ -77,7 +77,7 @@ void main() {
     vec3 specular = specularFactor * light_color;
 
     // Initialize color with directional light components
-    //vec3 color = ambient + diffuse + specular;
+    vec3 color = ambient + diffuse + specular;
 
     // Spotlight diffuse component
     float diffuseFactor2 = max(dot(transformedNormal, lightToVertex), 0.0);
@@ -100,6 +100,6 @@ void main() {
     }
 
     // Add spotlight contributions to the color
-    color = diffuse2 + specular2 + ambient + diffuse + specular;
+    color = diffuse2 + specular2 + ambient;
 
 }
