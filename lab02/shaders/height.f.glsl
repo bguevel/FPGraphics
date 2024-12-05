@@ -51,31 +51,34 @@ void main() {
     // --- Spotlight Calculations ---
 
     // Compute the vector from the fragment to the spotlight
-    vec3 lightToFrag = normalize(fragPosition - spotLightPosition);
+    //vec3 lightToFrag = normalize(fragPosition - spotLightPosition);
+    vec3 lightToFrag = normalize(spotLightPosition - fragPosition);
 
     // Calculate the angle between the spotlight direction and the fragment direction
-    float theta = dot(lightToFrag, normalize(spotLightDirection));
+    //float theta = dot(lightToFrag, normalize(spotLightDirection));
+    vec3 normalizedSpotDir = normalize(spotLightDirection);
+    float theta = dot(normalizedSpotDir, lightToFrag);
 
     // Determine if the fragment is inside the spotlight cone
     float epsilon = spotLightCutoff - spotLightOuterCutoff;
-    float intensity = clamp((theta - spotLightOuterCutoff) / epsilon, 0.0, 1.0);
+    float intensity = clamp((spotLightOuterCutoff -theta) / epsilon, 0.0, 1.0);
 
     // Compute distance for attenuation
-    float distance = length(fragPosition - spotLightPosition);
-    float attenuation = 1.0 / (1.0 + 0.09 * distance + 0.032 * distance * distance);
+    float distance = length(spotLightPosition - fragPosition);
+    float attenuation = 1.0 / (1.0 + 0.00009 * distance + 0.000032 * distance * distance);
 
     // Final spotlight intensity
     float spotIntensity = intensity * attenuation;
 
-    if(theta > spotLightOuterCutoff) {
+    if(theta <= spotLightOuterCutoff) {
         // Diffuse component for spotlight
         float diffSpot = max(dot(normalizedNormal, lightToFrag), 0.0);
-        vec3 diffuseSpot =  light_color * materialColor;
+        vec3 diffuseSpot =  light_color * materialColor * diffSpot *spotIntensity*5;
 
         // Specular component for spotlight
         vec3 reflectSpot = reflect(-lightToFrag, normalizedNormal);
         float specSpot = pow(max(dot(viewDir, reflectSpot), 0.0), shininess);
-        vec3 specularSpot = specStrength * light_color;
+        vec3 specularSpot = specStrength * light_color * specSpot *spotIntensity*5;
 
         // Add spotlight contributions with intensity
         finalColor += diffuseSpot + specularSpot;
@@ -86,4 +89,7 @@ void main() {
 
     // Set the fragment color
     fragColor = vec4(finalColor, 1.0);
+    //fragColor = vec4(vec3(spotIntensity,spotIntensity,spotIntensity),1.0);
+
+
 }
