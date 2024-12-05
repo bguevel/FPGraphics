@@ -87,8 +87,23 @@ protected:
     void mSetupScene() final;
  void calculateTerrainNormals();
  float getTerrainHeight(float x, float z) const;
+ GLuint _loadAndRegisterSkyboxTexture( const char* FILENAME );
+ void _createSkyboxBuffers( );
 
 private:
+ GLint _skyTex;
+ CSCI441::ShaderProgram* _skyboxShaderProgram;
+
+ struct SkyboxShaderUniformLocations
+ {
+  GLint modelMatrix;
+  GLint viewMatrix;
+  GLint projectionMatrix;
+  GLint skyboxTexture;
+ } _skyboxShaderUniformLocations;
+
+ GLuint _skyboxVAO, _skyboxVBO;
+
  float _centerX;
  float _centerZ;
  CSCI441::ShaderProgram* _terrainShaderProgram = nullptr;

@@ -24,6 +24,7 @@ void main() {
     // Sample height from the height map using texture coordinates
     float height = texture(heightMap, vTexCoord).r * maxHeight;
 
+
     // Apply displacement to the vertex position along the normal
     vec3 displacedPos = vPos + vNormal * height;
 

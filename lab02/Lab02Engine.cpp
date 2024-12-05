@@ -107,6 +107,14 @@ void Lab02Engine::mSetupShaders() {
     _terrainShaderAttributeLocations.vPos      = _terrainShaderProgram->getAttributeLocation("vPos");
     _terrainShaderAttributeLocations.vNormal   = _terrainShaderProgram->getAttributeLocation("vNormal");
     _terrainShaderAttributeLocations.vTexCoord = _terrainShaderProgram->getAttributeLocation("vTexCoord");
+
+    _skyboxShaderProgram = new CSCI441::ShaderProgram( "shaders/skybox.v.glsl", "shaders/skybox.f.glsl" );
+
+    // Get uniform locations
+    _skyboxShaderUniformLocations.modelMatrix      = _skyboxShaderProgram->getUniformLocation( "model" );
+    _skyboxShaderUniformLocations.viewMatrix       = _skyboxShaderProgram->getUniformLocation( "view" );
+    _skyboxShaderUniformLocations.projectionMatrix = _skyboxShaderProgram->getUniformLocation( "projection" );
+    _skyboxShaderUniformLocations.skyboxTexture    = _skyboxShaderProgram->getUniformLocation( "skyboxTexture" );
 }
 
 void Lab02Engine::mSetupBuffers() {
@@ -121,12 +129,14 @@ void Lab02Engine::mSetupBuffers() {
     if(!loadHeightMap("heightmap.png")) { // Ensure "heightmap.png" is in the correct directory
         exit(EXIT_FAILURE);
     }
-
+    _skyTex = _loadAndRegisterSkyboxTexture( "cubeMapFrozen.jpg" );
     // Now create the ground buffers using the loaded height map data
     _createGroundBuffers();
 
     // Generate other environment elements
     _generateEnvironment();
+
+    _createSkyboxBuffers( );
 }
 
 void Lab02Engine::mSetupScene() {
@@ -146,7 +156,7 @@ void Lab02Engine::mSetupScene() {
 
     //******************************************************************
     glm::vec3 beingPosition = _pPlane->getPosition(); // Assuming _pPlane is the Being
-    glm::vec3 spotLightPosition = glm::vec3(0.0f,30.0f,0.0f); // Spotlight above the Being
+    glm::vec3 spotLightPosition = glm::vec3(-110.0f,30.0f,-110.0f); // Spotlight above the Being
     glm::vec3 spotLightDirection = glm::vec3(0.0f,-1.0f,0.0f);
     GLfloat spotLightCutoff      = glm::cos( glm::radians( 40.0f ) );
     GLfloat spotLightOuterCutoff = glm::cos( glm::radians( 70.0f ) );
@@ -292,6 +302,42 @@ void Lab02Engine::_computeAndSendMatrixUniforms(glm::mat4 modelMtx, glm::mat4 vi
 }
 
 void Lab02Engine::_renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) const {
+
+
+    // Save current depth function and depth mask state
+    GLint prevDepthFunc;
+    glGetIntegerv( GL_DEPTH_FUNC, &prevDepthFunc );
+    GLboolean prevDepthMask;
+    glGetBooleanv( GL_DEPTH_WRITEMASK, &prevDepthMask );
+
+    // First, render the skybox
+    glDepthFunc( GL_LEQUAL ); // Change depth function for skybox
+    glDepthMask( GL_FALSE );  // Disable depth writing
+
+    _skyboxShaderProgram->useProgram( );
+
+    // Remove translation from the view matrix
+    glm::mat4 view = glm::mat4( glm::mat3( viewMtx ) );
+
+    // Set shader uniforms
+    _skyboxShaderProgram->setProgramUniform( _skyboxShaderUniformLocations.modelMatrix, glm::mat4( 1.0f ) );
+    _skyboxShaderProgram->setProgramUniform( _skyboxShaderUniformLocations.viewMatrix, view );
+    _skyboxShaderProgram->setProgramUniform( _skyboxShaderUniformLocations.projectionMatrix, projMtx );
+
+    // Bind the skybox texture
+    glActiveTexture( GL_TEXTURE0 );
+    glBindTexture( GL_TEXTURE_2D, _skyTex );
+    _skyboxShaderProgram->setProgramUniform( _skyboxShaderUniformLocations.skyboxTexture, 0 );
+
+    // Render the skybox cube
+    glBindVertexArray( _skyboxVAO );
+    glDrawElements( GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0 );
+    glBindVertexArray( 0 );
+
+    // Restore depth function and depth mask
+    glDepthFunc( prevDepthFunc );
+    glDepthMask( prevDepthMask );
+
     // 1. Draw Terrain with Terrain Shader
     _terrainShaderProgram->useProgram();
 
@@ -466,7 +512,57 @@ void Lab02Engine::handleCursorPositionEvent(glm::vec2 currMousePosition) {
     // update the mouse position
     _mousePosition = currMousePosition;
 }
+GLuint Lab02Engine::_loadAndRegisterSkyboxTexture( const char* FILENAME )
+{
+    // Our handle to the GPU texture
+    GLuint textureHandle = 0;
 
+    // Disable vertical flipping to load the image as-is
+    stbi_set_flip_vertically_on_load( true );
+
+    // Will hold image parameters after load
+    GLint imageWidth, imageHeight, imageChannels;
+
+    // Load image from file
+    GLubyte* data = stbi_load( FILENAME, &imageWidth, &imageHeight, &imageChannels, 0 );
+
+    // Check if data was read from file
+    if ( data )
+    {
+        // Determine the storage format
+        GLint STORAGE_TYPE = ( imageChannels == 4 ? GL_RGBA : GL_RGB );
+
+        // Generate a texture handle
+        glGenTextures( 1, &textureHandle );
+        // Bind it to be active
+        glBindTexture( GL_TEXTURE_2D, textureHandle );
+
+        // Set texture parameters
+        // Set texture filtering
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+        // Set texture wrapping to clamp to edge
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE ); // Wrap horizontally
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE ); // Wrap vertically
+
+        // Transfer image data to the GPU
+        glTexImage2D( GL_TEXTURE_2D, 0, STORAGE_TYPE, imageWidth, imageHeight, 0, STORAGE_TYPE, GL_UNSIGNED_BYTE, data );
+
+        // Print out image info for debugging
+        fprintf( stdout, "[INFO]: Skybox texture loaded: %s (Width: %d, Height: %d, Channels: %d)\n", FILENAME, imageWidth, imageHeight, imageChannels );
+
+        // Release image memory from CPU - it now lives on the GPU
+        stbi_image_free( data );
+    }
+    else
+    {
+        // Load failed
+        fprintf( stderr, "[ERROR]: Could not load skybox texture \"%s\"\n", FILENAME );
+    }
+
+    // Return generated texture handle
+    return textureHandle;
+}
 void Lab02Engine::_createGroundBuffers() {
     // Define scaling factors
     float scaleX = 1.0f; // Adjust as needed
@@ -498,7 +594,7 @@ void Lab02Engine::_createGroundBuffers() {
         }
     }
 
-    // Generate indices for triangle strips, skipping central hole
+    // Generate indices for triangles, excluding quads within the hole radius
     for(int z = 0; z < heightMapHeight - 1; ++z){
         for(int x = 0; x < heightMapWidth - 1; ++x){
             // Calculate positions for current quad
@@ -511,6 +607,11 @@ void Lab02Engine::_createGroundBuffers() {
             float centerQuadX = (posX0 + posX1) / 2.0f;
             float centerQuadZ = (posZ0 + posZ1) / 2.0f;
             float distQuadCenter = sqrt(centerQuadX * centerQuadX + centerQuadZ * centerQuadZ);
+
+            // Skip quads within the hole radius
+            if(distQuadCenter < 90.0){
+                continue; // Do not generate indices for this quad, creating a hole
+            }
 
             // Generate indices for the quad
             int topLeft = z * heightMapWidth + x;
@@ -583,6 +684,7 @@ void Lab02Engine::_createGroundBuffers() {
 
     glBindVertexArray(0);
 }
+
 
 void Lab02Engine::calculateTerrainNormals() {
     // Initialize normals array
@@ -689,6 +791,130 @@ void Lab02Engine::run() {
         glfwSwapBuffers(mpWindow);       // flush the OpenGL commands and make sure they get rendered!
         glfwPollEvents();				// check for any events and signal to redraw screen
     }
+}
+void Lab02Engine::_createSkyboxBuffers( )
+{
+  struct SkyboxVertex
+  {
+      glm::vec3 position;
+      glm::vec2 texCoords;
+  };
+
+  const float texWidth  = 1.0f / 4.0f;
+  const float texHeight = 1.0f / 3.0f;
+
+  std::vector<SkyboxVertex> vertices = {
+    // Right face (+X)
+    {  glm::vec3( 1, -1, -1 ), glm::vec2( 2 * texWidth,     texHeight ) }, // Bottom-left
+    {  glm::vec3( 1, -1,  1 ), glm::vec2( 3 * texWidth,     texHeight ) }, // Bottom-right
+    {  glm::vec3( 1,  1,  1 ), glm::vec2( 3 * texWidth, 2 * texHeight ) }, // Top-right
+    {  glm::vec3( 1,  1, -1 ), glm::vec2( 2 * texWidth, 2 * texHeight ) }, // Top-left
+
+    // Left face (-X)
+    { glm::vec3( -1, -1,  1 ), glm::vec2( 0 * texWidth,     texHeight ) }, // Bottom-left
+    { glm::vec3( -1, -1, -1 ), glm::vec2( 1 * texWidth,     texHeight ) }, // Bottom-right
+    { glm::vec3( -1,  1, -1 ), glm::vec2( 1 * texWidth, 2 * texHeight ) }, // Top-right
+    { glm::vec3( -1,  1,  1 ), glm::vec2( 0 * texWidth, 2 * texHeight ) }, // Top-left
+
+    // Top face (+Y)
+    { glm::vec3( -1,  1, -1 ), glm::vec2( 1 * texWidth, 2 * texHeight ) }, // Bottom-left
+    {  glm::vec3( 1,  1, -1 ), glm::vec2( 2 * texWidth, 2 * texHeight ) }, // Bottom-right
+    {  glm::vec3( 1,  1,  1 ), glm::vec2( 2 * texWidth, 3 * texHeight ) }, // Top-right
+    { glm::vec3( -1,  1,  1 ), glm::vec2( 1 * texWidth, 3 * texHeight ) }, // Top-left
+
+    // Bottom face (-Y)
+    { glm::vec3( -1, -1,  1 ), glm::vec2( 1 * texWidth, 0 * texHeight ) }, // Bottom-left
+    {  glm::vec3( 1, -1,  1 ), glm::vec2( 2 * texWidth, 0 * texHeight ) }, // Bottom-right
+    {  glm::vec3( 1, -1, -1 ), glm::vec2( 2 * texWidth, 1 * texHeight ) }, // Top-right
+    { glm::vec3( -1, -1, -1 ), glm::vec2( 1 * texWidth, 1 * texHeight ) }, // Top-left
+
+    // Front face (+Z)
+    { glm::vec3( -1, -1, -1 ), glm::vec2( 1 * texWidth,     texHeight ) }, // Bottom-left
+    {  glm::vec3( 1, -1, -1 ), glm::vec2( 2 * texWidth,     texHeight ) }, // Bottom-right
+    {  glm::vec3( 1,  1, -1 ), glm::vec2( 2 * texWidth, 2 * texHeight ) }, // Top-right
+    { glm::vec3( -1,  1, -1 ), glm::vec2( 1 * texWidth, 2 * texHeight ) }, // Top-left
+
+    // Back face (-Z)
+    {  glm::vec3( 1, -1,  1 ), glm::vec2( 3 * texWidth,     texHeight ) }, // Bottom-left
+    { glm::vec3( -1, -1,  1 ), glm::vec2( 4 * texWidth,     texHeight ) }, // Bottom-right
+    { glm::vec3( -1,  1,  1 ), glm::vec2( 4 * texWidth, 2 * texHeight ) }, // Top-right
+    {  glm::vec3( 1,  1,  1 ), glm::vec2( 3 * texWidth, 2 * texHeight ) }, // Top-left
+  };
+
+  // Indices for drawing the cube with GL_TRIANGLES
+  std::vector<GLuint> indices = {
+    // Right face
+    0,
+    1,
+    2,
+    2,
+    3,
+    0,
+
+    // Left face
+    4,
+    5,
+    6,
+    6,
+    7,
+    4,
+
+    // Top face
+    8,
+    9,
+    10,
+    10,
+    11,
+    8,
+
+    // Bottom face
+    12,
+    13,
+    14,
+    14,
+    15,
+    12,
+
+    // Front face
+    16,
+    17,
+    18,
+    18,
+    19,
+    16,
+
+    // Back face
+    20,
+    21,
+    22,
+    22,
+    23,
+    20,
+  };
+
+  // Create VAO and VBO
+  glGenVertexArrays( 1, &_skyboxVAO );
+  glGenBuffers( 1, &_skyboxVBO );
+  GLuint skyboxEBO;
+  glGenBuffers( 1, &skyboxEBO );
+
+  glBindVertexArray( _skyboxVAO );
+
+  glBindBuffer( GL_ARRAY_BUFFER, _skyboxVBO );
+  glBufferData( GL_ARRAY_BUFFER, vertices.size( ) * sizeof( SkyboxVertex ), &vertices[0], GL_STATIC_DRAW );
+
+  glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, skyboxEBO );
+  glBufferData( GL_ELEMENT_ARRAY_BUFFER, indices.size( ) * sizeof( GLuint ), &indices[0], GL_STATIC_DRAW );
+
+  // Position attribute
+  glEnableVertexAttribArray( 0 ); // Corresponds to location 0 in shader
+  glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, sizeof( SkyboxVertex ), (void*)0 );
+
+  // Texture coordinate attribute
+  glEnableVertexAttribArray( 1 ); // Corresponds to location 1 in shader
+  glVertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, sizeof( SkyboxVertex ), (void*)offsetof( SkyboxVertex, texCoords ) );
+
+  glBindVertexArray( 0 );
 }
 
 //*************************************************************************************
