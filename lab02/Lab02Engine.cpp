@@ -120,11 +120,11 @@ void Lab02Engine::mSetupShaders() {
 void Lab02Engine::mSetupBuffers() {
     maxHeight = 10.0f;
     // Initialize the plane (assuming this is part of your scene)
-    _pPlane = new Being(_lightingShaderProgram->getShaderProgramHandle(),
+
+    _pPlayerCar = new Car(_lightingShaderProgram->getShaderProgramHandle(),
                         _lightingShaderUniformLocations.mvpMatrix,
                         _lightingShaderAttributeLocations.vNorm,
                         _lightingShaderUniformLocations.materialColor);
-
     // Load the height map first
     if(!loadHeightMap("heightmap.png")) { // Ensure "heightmap.png" is in the correct directory
         exit(EXIT_FAILURE);
@@ -141,7 +141,7 @@ void Lab02Engine::mSetupBuffers() {
 
 void Lab02Engine::mSetupScene() {
     _pFreeCam = new FreeCam();
-    _pFreeCam->setLookAtPoint(_pPlane->getPosition());
+    _pFreeCam->setLookAtPoint(_pPlayerCar->getPosition());
     _pFreeCam->setTheta(0 );
     _pFreeCam->setPhi(1 );
     _pFreeCam->setRadius(15);
@@ -155,7 +155,7 @@ void Lab02Engine::mSetupScene() {
     glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle(), _lightingShaderUniformLocations.lightPosition, 1, glm::value_ptr(lightDirection));
 
     //******************************************************************
-    glm::vec3 beingPosition = _pPlane->getPosition(); // Assuming _pPlane is the Being
+    glm::vec3 playerPosition = _pPlayerCar->getPosition();
     glm::vec3 spotLightPosition = glm::vec3(-110.0f,30.0f,-110.0f); // Spotlight above the Being
     glm::vec3 spotLightDirection = glm::vec3(0.0f,-1.0f,0.0f);
     GLfloat spotLightCutoff      = glm::cos( glm::radians( 40.0f ) );
@@ -370,36 +370,36 @@ void Lab02Engine::_renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) const {
 
     // Compute and send matrix uniforms for lighting shader
     glm::mat4 modelMtxPlane = glm::mat4(1.0f);
-    glm::vec3 planePos = _pPlane->getPosition();
-    printf("Plane Position: (%f, %f, %f)\n", planePos.x, planePos.y, planePos.z);
-    modelMtxPlane = glm::translate(modelMtxPlane, _pPlane->getPosition());
+    glm::vec3 playerPos = _pPlayerCar->getPosition();
+    printf("Player Position: (%f, %f, %f)\n", playerPos.x, playerPos.y, playerPos.z);
+    modelMtxPlane = glm::translate(modelMtxPlane, _pPlayerCar->getPosition());
     _computeAndSendMatrixUniforms(modelMtxPlane, viewMtx, projMtx);
 
     // Draw the plane
-    _pPlane->drawPerson(modelMtxPlane, viewMtx, projMtx);
+    _pPlayerCar->draw(modelMtxPlane, viewMtx, projMtx);
 
 }
 
 void Lab02Engine::_updateScene(){
 
-    glm::vec3 planePos = _pPlane->getPosition();
+    glm::vec3 playerPos = _pPlayerCar->getPosition();
 
     // Retrieve the terrain height at the plane's current X and Z
-    float terrainHeight = getTerrainHeight(planePos.x, planePos.z);
+    float terrainHeight = getTerrainHeight(playerPos.x, playerPos.z);
 
     // Define an offset to keep the plane above the terrain
     float heightOffset = 0.5f; // Adjust as needed for your simulation
     //printf("Terrain Height: %f\n", terrainHeight);
     //printf("Plane Height: %f\n", planePos.y);
     // Ensure the plane stays above the terrain
-    if (planePos.y < terrainHeight + heightOffset) {
+    if (playerPos.y < terrainHeight + heightOffset) {
 
-        planePos.y = terrainHeight + heightOffset;
-        _pPlane->setPosition(planePos);
+        playerPos.y = terrainHeight + heightOffset;
+        _pPlayerCar->setPosition(playerPos);
     }
-    else if(planePos.y>terrainHeight + heightOffset) {
-        planePos.y = terrainHeight + heightOffset;
-        _pPlane->setPosition(planePos);
+    else if(playerPos.y>terrainHeight + heightOffset) {
+        playerPos.y = terrainHeight + heightOffset;
+        _pPlayerCar->setPosition(playerPos);
     }
 
     // still original functionality from lab5 to move the cam
@@ -431,35 +431,52 @@ void Lab02Engine::_updateScene(){
         _pFreeCam->rotate(0.0f, -_cameraSpeed.y);
     }
     if(_keys[GLFW_KEY_W] ) {
-        if(!(_pPlane->getPosition().x +0.2f < 100.0f && _pPlane->getPosition().z +0.2f < 100.0f && _pPlane->getPosition().x +0.2f > -100.0f && _pPlane->getPosition().z +0.2f > -100.0f)) { // bounds checking, so that we can stay within the created world
-            _pPlane->_isFalling = true;
+        if(!(_pPlayerCar->getPosition().x +0.2f < 100.0f && _pPlayerCar->getPosition().z +0.2f < 100.0f && _pPlayerCar->getPosition().x +0.2f > -100.0f && _pPlayerCar->getPosition().z +0.2f > -100.0f)) { // bounds checking, so that we can stay within the created world
+            _pPlayerCar->_isFalling = true;
             //outofbounds = true;
         }
-        _pPlane->setPosition(_pPlane->getPosition() + (_pPlane->getForwardDirection()*1.2f));
-        _pPlane->setForwardDirection();
+        //_pPlayerCar->setPosition(_pPlayerCar->getPosition() + (_pPlayerCar->getForwardDirection()*1.2f));
+        _pPlayerCar->moveForward(1.0f);
+        _pPlayerCar->setForwardDirection();
     }
-    if(_keys[GLFW_KEY_S] ) {
-        if(!(_pPlane->getPosition().x +0.2f < 100.0f && _pPlane->getPosition().z +0.2f < 100.0f && _pPlane->getPosition().x +0.2f > -100.0f && _pPlane->getPosition().z +0.2f > -100.0f)) { // bounds checking, so that we can stay within the created world
-            _pPlane->_isFalling = true;
+    else if(_keys[GLFW_KEY_S] ) {
+        if(!(_pPlayerCar->getPosition().x +0.2f < 100.0f && _pPlayerCar->getPosition().z +0.2f < 100.0f && _pPlayerCar->getPosition().x +0.2f > -100.0f && _pPlayerCar->getPosition().z +0.2f > -100.0f)) { // bounds checking, so that we can stay within the created world
+            _pPlayerCar->_isFalling = true;
             //outofbounds = true;
         }
-        _pPlane->setPosition(_pPlane->getPosition() - (_pPlane->getForwardDirection()*1.2f));
-        _pPlane->setForwardDirection();
+        //_pPlayerCar->setPosition(_pPlayerCar->getPosition() - (_pPlayerCar->getForwardDirection()*1.2f));
+        _pPlayerCar->moveBackward(1.0f);
+        _pPlayerCar->setForwardDirection();
+    }
+    else {
+        _pPlayerCar->notMoving();
     }
     if(_keys[GLFW_KEY_D] ) {
-        _pPlane->rotateSelf(-0.1f); // give the axis of travel and whether the axis involves the A key as then we need to inverse the angle
-        _pPlane->setForwardDirection();
+        if (_pPlayerCar->isMoving) {
+            _pPlayerCar->rotateSelf(-0.1f); // give the axis of travel and whether the axis involves the A key as then we need to inverse the angle
+            _pPlayerCar->setForwardDirection();
+        }
+        _pPlayerCar->isTurnRight = true;
+    }
+    else {
+        _pPlayerCar->isTurnRight = false;
     }
     if(_keys[GLFW_KEY_A] ) {
-        _pPlane->rotateSelf(0.1f); // give the axis of travel and whether the axis involves the A key as then we need to inverse the angle
-        _pPlane->setForwardDirection();
+        if (_pPlayerCar->isMoving) {
+            _pPlayerCar->rotateSelf(0.1f); // give the axis of travel and whether the axis involves the A key as then we need to inverse the angle
+            _pPlayerCar->setForwardDirection();
+        }
+        _pPlayerCar->isTurnLeft = true;
     }
-    _pPlane->setForwardDirection();
-    _pPlane->moveNose();
-    _pFreeCam->setLookAtPoint(_pPlane->getPosition());
+    else {
+        _pPlayerCar->isTurnLeft = false;
+    }
+    _pPlayerCar->setForwardDirection();
+    _pFreeCam->setLookAtPoint(_pPlayerCar->getPosition());
     _pFreeCam->recomputeOrientation();
+    _pPlayerCar->update();
     // Update marbles
-    //printf("my current y position is %f\n", _pPlane->getPosition().y);
+    //printf("my current y position is %f\n", _pPlayerCar->getPosition().y);
 
 }
 
@@ -504,9 +521,11 @@ void Lab02Engine::handleCursorPositionEvent(glm::vec2 currMousePosition) {
                 _pFreeCam->moveForward(_cameraSpeed.x);
             }
         }
-        // rotate the camera by the distance the mouse moved
-        _pFreeCam->rotate((currMousePosition.x - _mousePosition.x) * 0.005f,
-                         (_mousePosition.y - currMousePosition.y) * 0.005f );
+        else {
+            // rotate the camera by the distance the mouse moved
+            _pFreeCam->rotate((currMousePosition.x - _mousePosition.x) * 0.005f,
+                             (_mousePosition.y - currMousePosition.y) * 0.005f );
+        }
     }
 
     // update the mouse position

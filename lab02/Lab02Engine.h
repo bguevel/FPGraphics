@@ -8,6 +8,7 @@
 #include <glm/glm.hpp>
 #include "Being.h"
 #include "Marble.h"
+#include "Car.h"
 #include <vector>
 
 class Lab02Engine final : public CSCI441::OpenGLEngine {
@@ -171,7 +172,7 @@ private:
 
  } _lightingShaderAttributeLocations;
  CSCI441::ShaderProgram* _lightingShaderProgram = nullptr;
- Being* _pPlane;
+ Car* _pPlayerCar;
     /**
      * @brief Creates a VAO to draw a simple grid environment with buildings for the user to navigate through.
      */
