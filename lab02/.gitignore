@@ -1,0 +1,7 @@
+cmake-build-debug
+www
+.idea
+*~
+*.un~
+.gitignore
+.DS_Store

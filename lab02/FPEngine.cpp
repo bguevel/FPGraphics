@@ -1,21 +1,5 @@
 #include "FPEngine.h"
 
-#include <CSCI441/SimpleShader.hpp>
-#include <CSCI441/objects.hpp>
-
-#include <glm/gtc/matrix_transform.hpp>
-
-#include <cmath>
-#include <cstdio>
-#include <cstdlib>
-#include <ctime>
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-
-#ifndef M_PI
-#define M_PI 3.14159265f
-#endif
-
 //*************************************************************************************
 //
 // Helper Functions
@@ -25,16 +9,19 @@
 // Engine Setup
 
 FPEngine::FPEngine()
-      : CSCI441::OpenGLEngine(4, 1, 640, 640, "Lab02: Flight Simulator v0.41") {
+      : CSCI441::OpenGLEngine(4, 1, 640, 640, "FP - The Grey Havens") {
     _gridColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    _pFreeCam = new FreeCam();
     _mousePosition = glm::vec2(MOUSE_UNINITIALIZED, MOUSE_UNINITIALIZED );
     _leftMouseButtonState = GLFW_RELEASE;
     for(auto& _key : _keys) _key = GL_FALSE;
+    _cams = new CSCI441::Camera*[numCams];
 }
 
 FPEngine::~FPEngine() {
-    delete _pFreeCam;
+    for (int i = 0; i < numCams; ++i) {
+        delete _cams[i];
+    }
+    delete[] _cams;
 }
 
 void FPEngine::mSetupGLFW() {
@@ -58,8 +45,11 @@ void FPEngine::mSetupOpenGL() {
 void FPEngine::mSetupShaders() {
     _lightingShaderProgram = new CSCI441::ShaderProgram("shaders/lab05.v.glsl", "shaders/lab05.f.glsl" );
     _lightingShaderUniformLocations.mvpMatrix      = _lightingShaderProgram->getUniformLocation("mvpMatrix");
-    _lightingShaderUniformLocations.materialColor  = _lightingShaderProgram->getUniformLocation("materialColor");
-
+    _lightingShaderUniformLocations.materialDiffuse = _lightingShaderProgram->getUniformLocation("materialDiffuse");
+    _lightingShaderUniformLocations.materialSpecular = _lightingShaderProgram->getUniformLocation("materialSpecular");
+    _lightingShaderUniformLocations.materialShine = _lightingShaderProgram->getUniformLocation("materialShine");
+    _lightingShaderUniformLocations.isEmitter = _lightingShaderProgram->getUniformLocation("isEmitter");
+    // TODO #3A: assign uniforms
     _lightingShaderUniformLocations.lightColor = _lightingShaderProgram->getUniformLocation("light_color");
     _lightingShaderUniformLocations.lightPosition = _lightingShaderProgram->getUniformLocation("light_direction");
     _lightingShaderAttributeLocations.vPos         = _lightingShaderProgram->getAttributeLocation("vPos");
@@ -83,6 +73,9 @@ void FPEngine::mSetupShaders() {
     _terrainShaderUniformLocations.modelMatrix         = _terrainShaderProgram->getUniformLocation("modelMatrix");
     _terrainShaderUniformLocations.normalMatrix        = _terrainShaderProgram->getUniformLocation("normalMatrix");
     _terrainShaderUniformLocations.heightMap           = _terrainShaderProgram->getUniformLocation("heightMap");
+    _terrainShaderUniformLocations.trackFilter         = _terrainShaderProgram->getUniformLocation("trackFilter");
+    _terrainShaderUniformLocations.trackTexture        = _terrainShaderProgram->getUniformLocation("trackTexture");
+    _terrainShaderUniformLocations.sceneTexture        = _terrainShaderProgram->getUniformLocation("sceneTexture");
     _terrainShaderUniformLocations.maxHeight           = _terrainShaderProgram->getUniformLocation("maxHeight");
     _terrainShaderUniformLocations.materialColor       = _terrainShaderProgram->getUniformLocation("materialColor");
     _terrainShaderUniformLocations.camPosition         = _terrainShaderProgram->getUniformLocation("cameraPosition");
@@ -118,13 +111,25 @@ void FPEngine::mSetupShaders() {
 void FPEngine::mSetupBuffers() {
     maxHeight = 10.0f;
     // Initialize the plane (assuming this is part of your scene)
-    _pPlane = new Being(_lightingShaderProgram->getShaderProgramHandle(),
+
+    _pPlayerCar = new Car(_lightingShaderProgram->getShaderProgramHandle(),
                         _lightingShaderUniformLocations.mvpMatrix,
                         _lightingShaderAttributeLocations.vNorm,
-                        _lightingShaderUniformLocations.materialColor);
-
+                        _lightingShaderUniformLocations.materialDiffuse,
+                        _lightingShaderUniformLocations.materialSpecular,
+                        _lightingShaderUniformLocations.materialShine,
+                        _lightingShaderUniformLocations.isEmitter);
     // Load the height map first
     if(!loadHeightMap("heightmap.png")) { // Ensure "heightmap.png" is in the correct directory
+        exit(EXIT_FAILURE);
+    }
+    if ((_trackFilter = _loadAndRegisterTrackFilter("trackFilter.png")) == -1) {
+        exit(EXIT_FAILURE);
+    }
+    if ((_trackTexture = _loadAndRegisterTexture("roadTexture.jpg")) == -1) {
+        exit(EXIT_FAILURE);
+    }
+    if ((_sceneTexture = _loadAndRegisterTrackFilter("grassTexture.jpg")) == -1) {
         exit(EXIT_FAILURE);
     }
     _skyTex = _loadAndRegisterSkyboxTexture( "cubeMapFrozen.jpg" );
@@ -138,29 +143,39 @@ void FPEngine::mSetupBuffers() {
 }
 
 void FPEngine::mSetupScene() {
-    _pFreeCam = new FreeCam();
-    _pFreeCam->setLookAtPoint(_pPlane->getPosition());
-    _pFreeCam->setTheta(0 );
-    _pFreeCam->setPhi(1 );
-    _pFreeCam->setRadius(15);
-    _pFreeCam->recomputeOrientation();
+    //_pFreeCam = new FreeCam();
     _cameraSpeed = glm::vec2(0.25f, 0.02f);
 
     _aiCartPosition = evaluateBezier(_bezierT, _p0, _p1, _p2, _p3);
 
+    _cams[CAM_ID::ARC_CAM] = new CSCI441::ArcballCam();
+    _cams[CAM_ID::ARC_CAM]->setLookAtPoint(_pPlayerCar->getPosition());
+    _cams[CAM_ID::ARC_CAM]->setRadius(15);
+    _cams[CAM_ID::ARC_CAM]->setTheta(-M_PI / 3.0f );
+    _cams[CAM_ID::ARC_CAM]->setPhi(8*M_PI/6);
+    _cams[CAM_ID::ARC_CAM]->recomputeOrientation();
+
+    _cams[CAM_ID::FIXED_CAM] = new CSCI441::ArcballCam();
+    _cams[CAM_ID::FIXED_CAM]->setLookAtPoint(_pPlayerCar->getPosition());
+    _cams[CAM_ID::FIXED_CAM]->setRadius(15);
+    _cams[CAM_ID::FIXED_CAM]->setTheta(M_PI/2);
+    _cams[CAM_ID::FIXED_CAM]->setPhi(8*M_PI/6);
+    _cams[CAM_ID::FIXED_CAM]->recomputeOrientation();
+
+    camID = CAM_ID::FIXED_CAM;
+
     // TODO #6: set lighting uniforms
     glm::vec3 lightDirection = glm::vec3(-1.0f, -1.0f, -1.0f);
-    glm::vec3 lightColor = glm::vec3(0.2f, 0.2f, 0.02);
+    glm::vec3 lightColor = glm::vec3(0.2f, 0.2f, 0.2f);
     glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle(), _lightingShaderUniformLocations.lightColor, 1, glm::value_ptr(lightColor));
     glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle(), _lightingShaderUniformLocations.lightPosition, 1, glm::value_ptr(lightDirection));
 
     //******************************************************************
-    glm::vec3 beingPosition = _pPlane->getPosition(); // Assuming _pPlane is the Being
+    glm::vec3 playerPosition = _pPlayerCar->getPosition();
     glm::vec3 spotLightPosition = glm::vec3(-110.0f,30.0f,-110.0f); // Spotlight above the Being
     glm::vec3 spotLightDirection = glm::vec3(0.0f,-1.0f,0.0f);
     GLfloat spotLightCutoff      = glm::cos( glm::radians( 40.0f ) );
     GLfloat spotLightOuterCutoff = glm::cos( glm::radians( 70.0f ) );
-    glm::vec3 cameraPos = _pFreeCam->getPosition();
 
     glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.spotLightPosition, 1, glm::value_ptr( spotLightPosition ) );
 
@@ -173,7 +188,7 @@ void FPEngine::mSetupScene() {
     // Pass lighting data to terrain shader
     glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.lightPosition, 1, glm::value_ptr(lightDirection));
     glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.lightColor, 1, glm::value_ptr(lightColor));
-    glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.camPosition, 1, glm::value_ptr(_pFreeCam->getPosition()));
+    glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.camPosition, 1, glm::value_ptr(_cams[camID]->getPosition()));
     // Pass spotlight data
     glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.spotLightPosition, 1, glm::value_ptr(spotLightPosition));
     glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.spotLightDirection, 1, glm::value_ptr(spotLightDirection));
@@ -241,6 +256,87 @@ bool FPEngine::loadHeightMap(const std::string& filepath) {
     return true;
 }
 
+GLuint FPEngine::_loadAndRegisterTexture(const char *FILENAME) {
+    // our handle to the GPU
+    GLuint textureHandle = 0;
+
+    // enable setting to prevent image from being upside down
+    stbi_set_flip_vertically_on_load(true);
+
+    // will hold image parameters after load
+    GLint imageWidth, imageHeight, imageChannels;
+    // load image from file
+    GLubyte *data = stbi_load(FILENAME, &imageWidth, &imageHeight, &imageChannels, 0);
+    // if data was read from file
+    if (data) {
+        const GLint STORAGE_TYPE = (imageChannels == 4 ? GL_RGBA : GL_RGB);
+        glGenTextures(1, &textureHandle);
+        glBindTexture(GL_TEXTURE_2D, textureHandle);
+        // set texture parameters
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, STORAGE_TYPE, imageWidth, imageHeight, 0, STORAGE_TYPE, GL_UNSIGNED_BYTE, data);
+
+
+        fprintf(stdout, "[INFO]: %s texture map read in with handle %d\n", FILENAME, textureHandle);
+
+        // release image memory from CPU - it now lives on the GPU
+        stbi_image_free(data);
+    } else {
+        // load failed
+        fprintf(stderr, "[ERROR]: Could not load texture map \"%s\"\n", FILENAME);
+    }
+
+    // return generated texture handle
+    return textureHandle;
+}
+
+GLuint FPEngine::_loadAndRegisterTrackFilter(const char *FILENAME) {
+    // our handle to the GPU
+    GLuint textureHandle = 0;
+
+    // enable setting to prevent image from being upside down
+    stbi_set_flip_vertically_on_load(true);
+
+    // will hold image parameters after load
+    GLint imageWidth, imageHeight, imageChannels;
+    // load image from file
+    GLubyte *data = stbi_load(FILENAME, &imageWidth, &imageHeight, &imageChannels, 0);
+    // if data was read from file
+    if (data) {
+        const GLint STORAGE_TYPE = (imageChannels == 1 ? GL_DEPTH_COMPONENT : GL_RGB);
+        glGenTextures(1, &textureHandle);
+        glBindTexture(GL_TEXTURE_2D, textureHandle);
+        // set texture parameters
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, STORAGE_TYPE, imageWidth, imageHeight, 0, STORAGE_TYPE, GL_UNSIGNED_BYTE, data);
+
+        fprintf(stdout, "[INFO]: %s height map read in with handle %d\n", FILENAME, textureHandle);
+
+        // release image memory from CPU - it now lives on the GPU
+        stbi_image_free(data);
+    } else {
+        // load failed
+        fprintf(stderr, "[ERROR]: Could not load texture map \"%s\"\n", FILENAME);
+    }
+
+    // return generated texture handle
+    return textureHandle;
+}
+
 float FPEngine::getTerrainHeight(float x, float z) const {
     // Map world coordinates to heightmap coordinates
     float terrainX = x + _centerX;
@@ -264,7 +360,7 @@ float FPEngine::getTerrainHeight(float x, float z) const {
     float h01 = heightData[(z0 + 1) * heightMapWidth + x0];
     float h11 = heightData[(z0 + 1) * heightMapWidth + (x0 + 1)];
 
-    // Bilinear interpolation
+    // Bi-linear interpolation
     float h0 = h00 * (1 - tx) + h10 * tx;
     float h1 = h01 * (1 - tx) + h11 * tx;
     float interpolatedHeight = h0 * (1 - tz) + h1 * tz;
@@ -286,14 +382,6 @@ void FPEngine::_generateEnvironment() {
     const GLfloat BOTTOM_END_POINT = -GRID_LENGTH / 2.0f - 5.0f;
     const GLfloat TOP_END_POINT = GRID_LENGTH / 2.0f + 5.0f;
     //******************************************************************
-    // seed our RNG
-    srand( time(nullptr) );                                                // seed our RNG
-
-
-    // psych! everything's on a grid.
-
-
-
 
     //******************************************************************
     // draws a grid as our ground plane
@@ -314,17 +402,16 @@ void FPEngine::_computeAndSendMatrixUniforms(glm::mat4 modelMtx, glm::mat4 viewM
     glm::mat3 normalMtx = glm::mat3(glm::transpose(glm::inverse(modelMtx)));
     _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.vNormalMatrix, normalMtx);
     // Set camera position uniform
-    _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.camPosition, _pFreeCam->getPosition());
+    _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.camPosition, _cams[camID]->getPosition());
 
     // For terrain shader
     _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.mvpMatrix, mvpMtx);
     _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.modelMatrix, modelMtx);
     _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.normalMatrix, normalMtx);
-    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.camPosition, _pFreeCam->getPosition());
+    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.camPosition, _cams[camID]->getPosition());
 }
 
 void FPEngine::_renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) const {
-
 
     // Save current depth function and depth mask state
     GLint prevDepthFunc;
@@ -364,9 +451,18 @@ void FPEngine::_renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) const {
     _terrainShaderProgram->useProgram();
 
     // Bind heightmap texture
-    glActiveTexture(GL_TEXTURE0);
+    glActiveTexture(GL_TEXTURE0 + HEIGHT_MAP_SLOT);
     glBindTexture(GL_TEXTURE_2D, _heightMapTextureID);
-    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.heightMap, 0);
+    glActiveTexture(GL_TEXTURE0 + TRACK_FILTER_SLOT);
+    glBindTexture(GL_TEXTURE_2D, _trackFilter);
+    glActiveTexture(GL_TEXTURE0 + TRACK_TEXTURE_SLOT);
+    glBindTexture(GL_TEXTURE_2D, _trackTexture);
+    glActiveTexture(GL_TEXTURE0 + SCENE_TEXTURE_SLOT);
+    glBindTexture(GL_TEXTURE_2D, _sceneTexture);
+    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.heightMap, HEIGHT_MAP_SLOT);
+    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.trackFilter, TRACK_FILTER_SLOT);
+    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.trackTexture, TRACK_TEXTURE_SLOT);
+    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.sceneTexture, SCENE_TEXTURE_SLOT);
     glm::vec2 texelSize(1.0f / static_cast<float>(heightMapWidth),
                     1.0f / static_cast<float>(heightMapHeight));
     _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.texelSize, texelSize);
@@ -392,20 +488,20 @@ void FPEngine::_renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) const {
 
     // Compute and send matrix uniforms for lighting shader
     glm::mat4 modelMtxPlane = glm::mat4(1.0f);
-    glm::vec3 planePos = _pPlane->getPosition();
-    printf("Plane Position: (%f, %f, %f)\n", planePos.x, planePos.y, planePos.z);
-    modelMtxPlane = glm::translate(modelMtxPlane, _pPlane->getPosition());
+    glm::vec3 playerPos = _pPlayerCar->getPosition();
+
+    modelMtxPlane = glm::translate(modelMtxPlane, _pPlayerCar->getPosition());
     _computeAndSendMatrixUniforms(modelMtxPlane, viewMtx, projMtx);
 
     // Draw the plane
-    _pPlane->drawPerson(modelMtxPlane, viewMtx, projMtx);
+    _pPlayerCar->draw(modelMtxPlane, viewMtx, projMtx);
 
     // Compute transformations for the AI cart
     glm::mat4 modelMtxCart = glm::mat4(1.0f);
     modelMtxCart = glm::translate(modelMtxCart, _aiCartPosition);
     modelMtxCart = glm::scale(modelMtxCart, glm::vec3(0.5f));
 
-    // Calculate tangent to Bezier curve so car faces the curve direction
+    // Calculate tangent to Bézier curve so car faces the curve direction
     glm::vec3 nextPosition = evaluateBezier(_bezierT + 0.001f, _p0, _p1, _p2, _p3);
     glm::vec3 direction = glm::normalize(nextPosition - _aiCartPosition);
 
@@ -424,8 +520,8 @@ void FPEngine::_renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) const {
 
     _computeAndSendMatrixUniforms(modelMtxCart, viewMtx, projMtx);
 
-    // Set a distinct color for the AI cart
-    _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.materialColor, glm::vec3(1.0f, 0.0f, 0.0f));
+    // Set a distinct color for the AI cart TODO: Identify what color we want the ai cart to be
+    // _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.materialColor, glm::vec3(1.0f, 0.0f, 0.0f));
 
     // Draw a placeholder cube
     CSCI441::drawSolidCube(1.0f);
@@ -458,82 +554,77 @@ void FPEngine::_renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) const {
 
 void FPEngine::_updateScene(){
 
-    glm::vec3 planePos = _pPlane->getPosition();
+    glm::vec3 playerPos = _pPlayerCar->getPosition();
 
     // Retrieve the terrain height at the plane's current X and Z
-    float terrainHeightPlane = getTerrainHeight(planePos.x, planePos.z);
+    float terrainHeightPlayer = getTerrainHeight(playerPos.x, playerPos.z);
 
     // Define an offset to keep the plane above the terrain
     float heightOffset = 0.5f; // Adjust as needed for your simulation
     //printf("Terrain Height: %f\n", terrainHeight);
     //printf("Plane Height: %f\n", planePos.y);
-    // Ensure the plane stays above the terrain
-    if (planePos.y < terrainHeightPlane + heightOffset) {
-
-        planePos.y = terrainHeightPlane + heightOffset;
-        _pPlane->setPosition(planePos);
-    }
-    else if(planePos.y>terrainHeightPlane + heightOffset) {
-        planePos.y = terrainHeightPlane + heightOffset;
-        _pPlane->setPosition(planePos);
-    }
-
-    // still original functionality from lab5 to move the cam
-    if( _keys[GLFW_KEY_SPACE] ) {
-        // go backward if shift held down
-        if( _keys[GLFW_KEY_LEFT_SHIFT] || _keys[GLFW_KEY_RIGHT_SHIFT] ) {
-            _pFreeCam->moveBackward(_cameraSpeed.x);
-        }
-        // go forward
-        else {
-            _pFreeCam->moveForward(_cameraSpeed.x);
-        }
+    // Ensure the player stays above the terrain
+    if (playerPos.y < terrainHeightPlayer + heightOffset || playerPos.y>terrainHeightPlayer + heightOffset) {
+        playerPos.y = terrainHeightPlayer + heightOffset;
+        _pPlayerCar->setPosition(playerPos);
     }
     //keeping the original functionality with moving the cam
-    // turn right
-    if(_keys[GLFW_KEY_RIGHT] ) {
-        _pFreeCam->rotate(_cameraSpeed.y, 0.0f);
+    if(_keys[GLFW_KEY_1]) {
+        //Switch to Fixed
+        camID = CAM_ID::FIXED_CAM;
     }
-    // turn left
-    if( _keys[GLFW_KEY_LEFT] ) {
-        _pFreeCam->rotate(-_cameraSpeed.y, 0.0f);
-    }
-    // pitch up
-    if(_keys[GLFW_KEY_UP] ) {
-        _pFreeCam->rotate(0.0f, _cameraSpeed.y);
-    }
-    // pitch down
-    if(_keys[GLFW_KEY_DOWN] ) {
-        _pFreeCam->rotate(0.0f, -_cameraSpeed.y);
+    else if (_keys[GLFW_KEY_2]) {
+        //Switch to arc
+        camID = CAM_ID::ARC_CAM;
     }
     if(_keys[GLFW_KEY_W] ) {
-        if(!(_pPlane->getPosition().x +0.2f < 100.0f && _pPlane->getPosition().z +0.2f < 100.0f && _pPlane->getPosition().x +0.2f > -100.0f && _pPlane->getPosition().z +0.2f > -100.0f)) { // bounds checking, so that we can stay within the created world
-            _pPlane->_isFalling = true;
-
+        if(!(_pPlayerCar->getPosition().x +0.2f < 100.0f && _pPlayerCar->getPosition().z +0.2f < 100.0f && _pPlayerCar->getPosition().x +0.2f > -100.0f && _pPlayerCar->getPosition().z +0.2f > -100.0f)) { // bounds checking, so that we can stay within the created world
+            _pPlayerCar->_isFalling = true;
         }
-        _pPlane->setPosition(_pPlane->getPosition() + (_pPlane->getForwardDirection()*1.2f));
-        _pPlane->setForwardDirection();
+        _pPlayerCar->moveForward(1.0f);
+        _pPlayerCar->setForwardDirection();
     }
-    if(_keys[GLFW_KEY_S] ) {
-        if(!(_pPlane->getPosition().x +0.2f < 100.0f && _pPlane->getPosition().z +0.2f < 100.0f && _pPlane->getPosition().x +0.2f > -100.0f && _pPlane->getPosition().z +0.2f > -100.0f)) { // bounds checking, so that we can stay within the created world
-            _pPlane->_isFalling = true;
-
+    else if(_keys[GLFW_KEY_S] ) {
+        if(!(_pPlayerCar->getPosition().x +0.2f < 100.0f && _pPlayerCar->getPosition().z +0.2f < 100.0f && _pPlayerCar->getPosition().x +0.2f > -100.0f && _pPlayerCar->getPosition().z +0.2f > -100.0f)) { // bounds checking, so that we can stay within the created world
+            _pPlayerCar->_isFalling = true;
         }
-        _pPlane->setPosition(_pPlane->getPosition() - (_pPlane->getForwardDirection()*1.2f));
-        _pPlane->setForwardDirection();
+        _pPlayerCar->moveBackward(1.0f);
+        _pPlayerCar->setForwardDirection();
+    }
+    else {
+        _pPlayerCar->notMoving();
     }
     if(_keys[GLFW_KEY_D] ) {
-        _pPlane->rotateSelf(-0.1f); // give the axis of travel and whether the axis involves the A key as then we need to inverse the angle
-        _pPlane->setForwardDirection();
+        if (_pPlayerCar->isMoving) {
+            _pPlayerCar->rotateSelf(-0.1f); // give the axis of travel and whether the axis involves the A key as then we need to inverse the angle
+            _pPlayerCar->setForwardDirection();
+            _cams[CAM_ID::FIXED_CAM]->setTheta(_cams[CAM_ID::FIXED_CAM]->getTheta() + 0.1f);
+
+        }
+        _pPlayerCar->isTurnRight = true;
+
+    }
+    else {
+        _pPlayerCar->isTurnRight = false;
     }
     if(_keys[GLFW_KEY_A] ) {
-        _pPlane->rotateSelf(0.1f); // give the axis of travel and whether the axis involves the A key as then we need to inverse the angle
-        _pPlane->setForwardDirection();
+        if (_pPlayerCar->isMoving) {
+            _pPlayerCar->rotateSelf(0.1f); // give the axis of travel and whether the axis involves the A key as then we need to inverse the angle
+            _pPlayerCar->setForwardDirection();
+            _cams[CAM_ID::FIXED_CAM]->setTheta(_cams[CAM_ID::FIXED_CAM]->getTheta() - 0.1f);
+
+        }
+        _pPlayerCar->isTurnLeft = true;
+
     }
-    _pPlane->setForwardDirection();
-    _pPlane->moveNose();
-    _pFreeCam->setLookAtPoint(_pPlane->getPosition());
-    _pFreeCam->recomputeOrientation();
+    else {
+        _pPlayerCar->isTurnLeft = false;
+    }
+    _pPlayerCar->setForwardDirection();
+    _cams[camID]->setLookAtPoint(_pPlayerCar->getPosition());
+    _cams[camID]->recomputeOrientation();
+    _pPlayerCar->update();
+    _moveSpotlight();
 
     // Update distance by a delta time
     double currentTime = glfwGetTime();
@@ -541,7 +632,6 @@ void FPEngine::_updateScene(){
     _lastTime = currentTime;
 
     _distanceTraveled += _bezierSpeed * (float)deltaTime;
-
     if (_distanceTraveled > _totalLength) {
         _distanceTraveled = fmod(_distanceTraveled, _totalLength); // loop around
     }
@@ -591,15 +681,17 @@ void FPEngine::handleCursorPositionEvent(glm::vec2 currMousePosition) {
     if(_leftMouseButtonState == GLFW_PRESS) {
         if(_keys[GLFW_KEY_LEFT_SHIFT] || _keys[GLFW_KEY_RIGHT_SHIFT]) { // this is to check if shift is being pressed so we can zoom
             if(_mousePosition.y - currMousePosition.y < 0) { // zoom in or out
-                _pFreeCam->moveBackward(_cameraSpeed.x);
+                _cams[camID]->moveBackward(_cameraSpeed.x);
             }
             else {
-                _pFreeCam->moveForward(_cameraSpeed.x);
+                _cams[camID]->moveForward(_cameraSpeed.x);
             }
         }
-        // rotate the camera by the distance the mouse moved
-        _pFreeCam->rotate((currMousePosition.x - _mousePosition.x) * 0.005f,
-                         (_mousePosition.y - currMousePosition.y) * 0.005f );
+        else {
+            // rotate the camera by the distance the mouse moved
+            if (camID != CAM_ID::FIXED_CAM) _cams[camID]->rotate((currMousePosition.x - _mousePosition.x) * 0.005f,
+                             (_mousePosition.y - currMousePosition.y) * 0.005f );
+        }
     }
 
     // update the mouse position
@@ -843,6 +935,18 @@ void FPEngine::calculateTerrainNormals() {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
+void FPEngine::_moveSpotlight() {
+    glm::vec3 spotLightPosition = _pPlayerCar->getPosition() + (_pPlayerCar->getForwardDirection()*5.0f); // Spotlight above the Being
+    glm::vec3 spotLightDirection = _pPlayerCar->getForwardDirection();
+
+    glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.spotLightPosition, 1, glm::value_ptr( spotLightPosition ) );
+    glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.spotLightDirection, 1, glm::value_ptr( spotLightDirection ) );
+
+    glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.spotLightPosition, 1, glm::value_ptr(spotLightPosition));
+    glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.spotLightDirection, 1, glm::value_ptr(spotLightDirection));
+
+}
+
 void FPEngine::run() {
     printf("\nControls:\n");
     printf("\tW A S D - forwards, backwards, and side to side for the character in the world\n");
@@ -871,15 +975,10 @@ void FPEngine::run() {
         // the GL_PROJECTION matrix governs properties of the view coordinates;
         // i.e. what gets seen - use a perspective projection that ranges
         // with a FOV of 45 degrees, for our current aspect ratio, and Z ranges from [0.001, 1000].
-        glm::mat4 projMtx = glm::perspective( 45.0f, (GLfloat)mWindowWidth / (GLfloat)mWindowHeight, 0.001f, 1000.0f );
-       // CSCI441::SimpleShader3::setProjectionMatrix(projMtx);
-
         // set up our look at matrix to position our camera
-        glm::mat4 viewMtx = _pFreeCam->getViewMatrix();
         // multiply by the look at matrix - this is the same as our view matrix
-        //CSCI441::SimpleShader3::setViewMatrix(viewMtx);
 
-        _renderScene(_pFreeCam->getViewMatrix(), _pFreeCam->getProjectionMatrix());					// draw everything to the window
+        _renderScene(_cams[camID]->getViewMatrix(), _cams[camID]->getProjectionMatrix());					// draw everything to the window
         _updateScene();
         glfwSwapBuffers(mpWindow);       // flush the OpenGL commands and make sure they get rendered!
         glfwPollEvents();				// check for any events and signal to redraw screen
@@ -1031,7 +1130,7 @@ void FPEngine::_computeAndSendTransformationMatrices( CSCI441::ShaderProgram* sh
                                                          glm::mat4 viewMatrix,
                                                          glm::mat4 projectionMatrix,
                                                          GLint mvpMtxLocation,
-                                                         GLint normalMtxLocation ) const
+                                                         GLint normalMtxLocation )
 {
     // ensure our shader program is not null
     if ( shaderProgram )
