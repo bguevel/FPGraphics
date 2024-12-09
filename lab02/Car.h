@@ -21,7 +21,7 @@ class Car
     /// \param mvpMtxUniformLocation uniform location for the full precomputed MVP matrix
     /// \param normalMtxUniformLocation uniform location for the precomputed Normal matrix
     /// \param materialColorUniformLocation uniform location for the material diffuse color
-    Car( GLuint shaderProgramHandle, GLint mvpMtxUniformLocation, GLint normalMtxUniformLocation,  GLint materialDiffuseUniformLocation, GLint materialSpecularUniformLocation, GLint materialShineUniformLocation);
+    Car( GLuint shaderProgramHandle, GLint mvpMtxUniformLocation, GLint normalMtxUniformLocation,  GLint materialDiffuseUniformLocation, GLint materialSpecularUniformLocation, GLint materialShineUniformLocation, GLint emitterUniformLocation);
 
     /// \desc draws the model plane for a given MVP matrix
     /// \param modelMtx existing model matrix to apply to plane
@@ -33,6 +33,7 @@ class Car
     void _drawBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx);
     void _drawWheel(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx, GLboolean isLeft);
     void _drawWheels(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx);
+    void _drawHeadlights(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx);
 
     /// \desc simulates the plane flying forward by rotating the propeller clockwise
 
@@ -83,6 +84,7 @@ class Car
         GLint materialDiffuse;
         GLint materialSpecular;
         GLint materialShine;
+        GLint isEmitter;
 
         GLint modelMtx;
     } _shaderProgramUniformLocations;

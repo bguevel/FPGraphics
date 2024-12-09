@@ -7,7 +7,7 @@
 #include <CSCI441/OpenGLUtils.hpp>
 #include <iostream>
 
-Car::Car( GLuint shaderProgramHandle, GLint mvpMtxUniformLocation, GLint normalMtxUniformLocation, GLint materialDiffuseUniformLocation, GLint materialSpecularUniformLocation, GLint materialShineUniformLocation ) {
+Car::Car( GLuint shaderProgramHandle, GLint mvpMtxUniformLocation, GLint normalMtxUniformLocation, GLint materialDiffuseUniformLocation, GLint materialSpecularUniformLocation, GLint materialShineUniformLocation, GLint emitterUniformLocation) {
     _position = glm::vec3( 40.0f, 0.5f, 15.0f );
 
     _shaderProgramHandle                             = shaderProgramHandle;
@@ -16,6 +16,7 @@ Car::Car( GLuint shaderProgramHandle, GLint mvpMtxUniformLocation, GLint normalM
     _shaderProgramUniformLocations.materialDiffuse   = materialDiffuseUniformLocation;
     _shaderProgramUniformLocations.materialSpecular  = materialSpecularUniformLocation;
     _shaderProgramUniformLocations.materialShine     = materialShineUniformLocation;
+    _shaderProgramUniformLocations.isEmitter         = emitterUniformLocation;
 
 
     _rotateAngle = _PI / 2.0f;
@@ -67,6 +68,7 @@ void Car::draw(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
 
     _drawBody(modelMtx, viewMtx, projMtx);
     _drawWheels(modelMtx, viewMtx, projMtx);
+    _drawHeadlights(modelMtx, viewMtx, projMtx);
 }
 
 void Car::_drawBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
@@ -92,7 +94,6 @@ void Car::_drawBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
 void Car::_drawWheel(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx, GLboolean isLeft) {
     modelMtx = glm::scale(modelMtx, _scaleWheel);
     modelMtx = glm::rotate(modelMtx, glm::radians(isLeft ? wheelRotation : -wheelRotation), glm::vec3(0.0f,1.0f,0.0f));
-    //fprintf(stdout, "Wheel rotation: %f\n", wheelRotation);
 
     _computeAndSendMatrixUniforms(modelMtx, viewMtx, projMtx);
     _sendMaterial(CSCI441::Materials::JADE);
@@ -132,6 +133,20 @@ void Car::_drawWheels(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx)
     glm::mat4 BL = glm::translate(modelMtx, glm::vec3(-_scaleBody.x/2, -_scaleBody.y/2, _scaleBody.z/2 - 2*_scaleWheel.z));
     BL = glm::rotate(BL, glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     _drawWheel(BL, viewMtx, projMtx, true);
+}
+
+void Car::_drawHeadlights(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
+    glProgramUniform1i(_shaderProgramHandle,_shaderProgramUniformLocations.isEmitter,(GLint)1);
+    glm::mat4 FR = glm::translate(modelMtx, glm::vec3(_scaleBody.x/2 - 0.2f, -0.2f, -_scaleBody.z));
+    _sendMaterial(CSCI441::Materials::GOLD_POLISHED);
+    _computeAndSendMatrixUniforms(FR, viewMtx, projMtx);
+    CSCI441::drawSolidSphere(0.1f,10,10);
+    glm::mat4 FL = glm::translate(modelMtx, glm::vec3(-_scaleBody.x/2 + 0.2f, -0.2f, -_scaleBody.z));
+    _sendMaterial(CSCI441::Materials::GOLD_POLISHED);
+    _computeAndSendMatrixUniforms(FL, viewMtx, projMtx);
+    CSCI441::drawSolidSphere(0.1f,10,10);
+    glProgramUniform1i(_shaderProgramHandle,_shaderProgramUniformLocations.isEmitter,0);
+
 }
 
 

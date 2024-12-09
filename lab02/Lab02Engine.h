@@ -147,6 +147,7 @@ private:
   GLint materialSpecular;
   GLint materialShine;
   GLint modelMatrix;
+  GLint isEmitter;
   // TODO #1: add new uniforms
   GLint vNormalMatrix;
   GLint lightPosition;
@@ -228,6 +229,8 @@ private:
  /// \desc the number of points that make up our ground object
  GLsizei _numGroundPoints;
  void _createGroundBuffers();
+
+ void _moveSpotlight();
 
 };
 

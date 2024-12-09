@@ -74,6 +74,7 @@ void Lab02Engine::mSetupShaders() {
     _lightingShaderUniformLocations.materialDiffuse = _lightingShaderProgram->getUniformLocation("materialDiffuse");
     _lightingShaderUniformLocations.materialSpecular = _lightingShaderProgram->getUniformLocation("materialSpecular");
     _lightingShaderUniformLocations.materialShine = _lightingShaderProgram->getUniformLocation("materialShine");
+    _lightingShaderUniformLocations.isEmitter = _lightingShaderProgram->getUniformLocation("isEmitter");
     // TODO #3A: assign uniforms
     _lightingShaderUniformLocations.lightColor = _lightingShaderProgram->getUniformLocation("light_color");
     _lightingShaderUniformLocations.lightPosition = _lightingShaderProgram->getUniformLocation("light_direction");
@@ -131,7 +132,8 @@ void Lab02Engine::mSetupBuffers() {
                         _lightingShaderAttributeLocations.vNorm,
                         _lightingShaderUniformLocations.materialDiffuse,
                         _lightingShaderUniformLocations.materialSpecular,
-                        _lightingShaderUniformLocations.materialShine);
+                        _lightingShaderUniformLocations.materialShine,
+                        _lightingShaderUniformLocations.isEmitter);
     // Load the height map first
     if(!loadHeightMap("heightmap.png")) { // Ensure "heightmap.png" is in the correct directory
         exit(EXIT_FAILURE);
@@ -388,7 +390,8 @@ void Lab02Engine::_renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) const {
     // Compute and send matrix uniforms for lighting shader
     glm::mat4 modelMtxPlane = glm::mat4(1.0f);
     glm::vec3 playerPos = _pPlayerCar->getPosition();
-    fprintf(stdout,"Player Position: (%f, %f, %f)\n", playerPos.x, playerPos.y, playerPos.z);
+    //fprintf(stdout,"Player Position: (%f, %f, %f)\n", playerPos.x, playerPos.y, playerPos.z);
+    //fprintf(stdout,"Player Position: (%f, %f, %f)\n", playerPos.x, playerPos.y, playerPos.z);
     modelMtxPlane = glm::translate(modelMtxPlane, _pPlayerCar->getPosition());
     _computeAndSendMatrixUniforms(modelMtxPlane, viewMtx, projMtx);
 
@@ -452,9 +455,8 @@ void Lab02Engine::_updateScene(){
         if (_pPlayerCar->isMoving) {
             _pPlayerCar->rotateSelf(-0.1f); // give the axis of travel and whether the axis involves the A key as then we need to inverse the angle
             _pPlayerCar->setForwardDirection();
-            if (camID == CAM_ID::FIXED_CAM) {
-                _cams[camID]->setTheta(_cams[camID]->getTheta() + 0.1f);
-            }
+            _cams[CAM_ID::FIXED_CAM]->setTheta(_cams[CAM_ID::FIXED_CAM]->getTheta() + 0.1f);
+
         }
         _pPlayerCar->isTurnRight = true;
 
@@ -466,9 +468,8 @@ void Lab02Engine::_updateScene(){
         if (_pPlayerCar->isMoving) {
             _pPlayerCar->rotateSelf(0.1f); // give the axis of travel and whether the axis involves the A key as then we need to inverse the angle
             _pPlayerCar->setForwardDirection();
-            if (camID == CAM_ID::FIXED_CAM) {
-                _cams[camID]->setTheta(_cams[camID]->getTheta() - 0.1f);
-            }
+            _cams[CAM_ID::FIXED_CAM]->setTheta(_cams[CAM_ID::FIXED_CAM]->getTheta() - 0.1f);
+
         }
         _pPlayerCar->isTurnLeft = true;
 
@@ -477,11 +478,10 @@ void Lab02Engine::_updateScene(){
         _pPlayerCar->isTurnLeft = false;
     }
     _pPlayerCar->setForwardDirection();
-    fprintf(stdout, "Camera position (%f,%f)\n", _cams[camID]->getPosition().x, _cams[camID]->getPosition().z);
     _cams[camID]->setLookAtPoint(_pPlayerCar->getPosition());
-    fprintf(stdout, "Camera position After (%f,%f)\n", _cams[camID]->getPosition().x, _cams[camID]->getPosition().z);
     _cams[camID]->recomputeOrientation();
     _pPlayerCar->update();
+    _moveSpotlight();
 
 }
 
@@ -773,6 +773,19 @@ void Lab02Engine::calculateTerrainNormals() {
     glBufferSubData(GL_ARRAY_BUFFER, 0, terrainVertices.size() * sizeof(float), terrainVertices.data());
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
+
+void Lab02Engine::_moveSpotlight() {
+    glm::vec3 spotLightPosition = _pPlayerCar->getPosition() + (_pPlayerCar->getForwardDirection()*5.0f); // Spotlight above the Being
+    glm::vec3 spotLightDirection = _pPlayerCar->getForwardDirection();
+
+    glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.spotLightPosition, 1, glm::value_ptr( spotLightPosition ) );
+    glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.spotLightDirection, 1, glm::value_ptr( spotLightDirection ) );
+
+    glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.spotLightPosition, 1, glm::value_ptr(spotLightPosition));
+    glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.spotLightDirection, 1, glm::value_ptr(spotLightDirection));
+
+}
+
 
 void Lab02Engine::run() {
     printf("\nControls:\n");

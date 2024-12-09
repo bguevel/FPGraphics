@@ -5,6 +5,7 @@
 uniform vec4 materialDiffuse;
 uniform vec4 materialSpecular;
 uniform float materialShine;
+uniform int isEmitter;
 
 // Spot light uniforms
 uniform vec3 spotLightPosition;
@@ -25,6 +26,10 @@ in vec3 viewDir;               // Direction from fragment to camera
 out vec4 fragColorOut;                  // color to apply to this fragment
 
 void main() {
+    if (isEmitter == 1) {
+        fragColorOut = materialSpecular;
+        return;
+    }
     // Normalize the input normal vector
     vec3 normalizedNormal = normalize(fragNormal);
 
