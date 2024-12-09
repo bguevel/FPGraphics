@@ -11,14 +11,14 @@
  *
  */
 
-#include "Lab02Engine.h"
+#include "FPEngine.h"
 
 //**************************************************************************************
 //
 // Our main function
 
 int main() {
-    auto labEngine = new Lab02Engine();
+    auto labEngine = new FPEngine();
     labEngine->initialize();
     if (labEngine->getError() == CSCI441::OpenGLEngine::OPENGL_ENGINE_ERROR_NO_ERROR) {
         labEngine->run();
