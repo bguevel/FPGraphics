@@ -33,7 +33,7 @@ GLfloat getRand() {
 // Engine Setup
 
 Lab02Engine::Lab02Engine()
-      : CSCI441::OpenGLEngine(4, 1, 640, 640, "Lab02: Flight Simulator v0.41") {
+      : CSCI441::OpenGLEngine(4, 1, 640, 640, "FP - The Grey Havens") {
     _gridVAO = 0;
     _numGridPoints = 0;
     _gridColor = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -68,10 +68,8 @@ void Lab02Engine::mSetupOpenGL() {
 void Lab02Engine::mSetupShaders() {
     _lightingShaderProgram = new CSCI441::ShaderProgram("shaders/lab05.v.glsl", "shaders/lab05.f.glsl" );
     _lightingShaderUniformLocations.mvpMatrix      = _lightingShaderProgram->getUniformLocation("mvpMatrix");
-    _lightingShaderUniformLocations.materialColor  = _lightingShaderProgram->getUniformLocation("materialColor");
     _lightingShaderUniformLocations.materialDiffuse = _lightingShaderProgram->getUniformLocation("materialDiffuse");
     _lightingShaderUniformLocations.materialSpecular = _lightingShaderProgram->getUniformLocation("materialSpecular");
-    _lightingShaderUniformLocations.materialAmbient = _lightingShaderProgram->getUniformLocation("materialAmbient");
     _lightingShaderUniformLocations.materialShine = _lightingShaderProgram->getUniformLocation("materialShine");
     // TODO #3A: assign uniforms
     _lightingShaderUniformLocations.lightColor = _lightingShaderProgram->getUniformLocation("light_color");
@@ -128,10 +126,8 @@ void Lab02Engine::mSetupBuffers() {
     _pPlayerCar = new Car(_lightingShaderProgram->getShaderProgramHandle(),
                         _lightingShaderUniformLocations.mvpMatrix,
                         _lightingShaderAttributeLocations.vNorm,
-                        _lightingShaderUniformLocations.materialColor,
                         _lightingShaderUniformLocations.materialDiffuse,
                         _lightingShaderUniformLocations.materialSpecular,
-                        _lightingShaderUniformLocations.materialAmbient,
                         _lightingShaderUniformLocations.materialShine);
     // Load the height map first
     if(!loadHeightMap("heightmap.png")) { // Ensure "heightmap.png" is in the correct directory
@@ -379,7 +375,7 @@ void Lab02Engine::_renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) const {
     // Compute and send matrix uniforms for lighting shader
     glm::mat4 modelMtxPlane = glm::mat4(1.0f);
     glm::vec3 playerPos = _pPlayerCar->getPosition();
-    //printf("Player Position: (%f, %f, %f)\n", playerPos.x, playerPos.y, playerPos.z);
+    printf("Player Position: (%f, %f, %f)\n", playerPos.x, playerPos.y, playerPos.z);
     modelMtxPlane = glm::translate(modelMtxPlane, _pPlayerCar->getPosition());
     _computeAndSendMatrixUniforms(modelMtxPlane, viewMtx, projMtx);
 

@@ -7,16 +7,14 @@
 #include <CSCI441/OpenGLUtils.hpp>
 #include <iostream>
 
-Car::Car( GLuint shaderProgramHandle, GLint mvpMtxUniformLocation, GLint normalMtxUniformLocation, GLint materialColorUniformLocation, GLint materialDiffuseUniformLocation, GLint materialSpecularUniformLocation, GLint materialAmbientUniformLocation, GLint materialShineUniformLocation ) {
+Car::Car( GLuint shaderProgramHandle, GLint mvpMtxUniformLocation, GLint normalMtxUniformLocation, GLint materialDiffuseUniformLocation, GLint materialSpecularUniformLocation, GLint materialShineUniformLocation ) {
     _position = glm::vec3( 40.0f, 0.5f, 15.0f );
 
     _shaderProgramHandle                             = shaderProgramHandle;
     _shaderProgramUniformLocations.mvpMtx            = mvpMtxUniformLocation;
     _shaderProgramUniformLocations.normalMtx         = normalMtxUniformLocation;
-    _shaderProgramUniformLocations.materialColor     = materialColorUniformLocation;
     _shaderProgramUniformLocations.materialDiffuse   = materialDiffuseUniformLocation;
     _shaderProgramUniformLocations.materialSpecular  = materialSpecularUniformLocation;
-    _shaderProgramUniformLocations.materialAmbient   = materialAmbientUniformLocation;
     _shaderProgramUniformLocations.materialShine     = materialShineUniformLocation;
 
 
@@ -182,7 +180,6 @@ void Car::_computeAndSendMatrixUniforms(glm::mat4 modelMtx, glm::mat4 viewMtx, g
 void Car::_sendMaterial(const CSCI441::Materials::Material &mat) const {
     glProgramUniform4fv(_shaderProgramHandle, _shaderProgramUniformLocations.materialDiffuse, 1, glm::value_ptr(mat.getDiffuse()));
     glProgramUniform4fv(_shaderProgramHandle, _shaderProgramUniformLocations.materialSpecular, 1, glm::value_ptr(mat.getSpecular()));
-    glProgramUniform4fv(_shaderProgramHandle, _shaderProgramUniformLocations.materialAmbient, 1, glm::value_ptr(mat.getAmbient()));
     glProgramUniform1f(_shaderProgramHandle, _shaderProgramUniformLocations.materialShine,mat.shininess);
 }
 

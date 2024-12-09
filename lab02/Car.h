@@ -21,7 +21,7 @@ class Car
     /// \param mvpMtxUniformLocation uniform location for the full precomputed MVP matrix
     /// \param normalMtxUniformLocation uniform location for the precomputed Normal matrix
     /// \param materialColorUniformLocation uniform location for the material diffuse color
-    Car( GLuint shaderProgramHandle, GLint mvpMtxUniformLocation, GLint normalMtxUniformLocation, GLint materialColorUniformLocation , GLint materialDiffuseUniformLocation, GLint materialSpecularUniformLocation, GLint materialAmbientUniformLocation, GLint materialShineUniformLocation);
+    Car( GLuint shaderProgramHandle, GLint mvpMtxUniformLocation, GLint normalMtxUniformLocation,  GLint materialDiffuseUniformLocation, GLint materialSpecularUniformLocation, GLint materialShineUniformLocation);
 
     /// \desc draws the model plane for a given MVP matrix
     /// \param modelMtx existing model matrix to apply to plane
@@ -80,10 +80,8 @@ class Car
         /// \desc location of the precomputed Normal matrix
         GLint normalMtx;
         /// \desc location of the material diffuse color
-        GLint materialColor;
         GLint materialDiffuse;
         GLint materialSpecular;
-        GLint materialAmbient;
         GLint materialShine;
 
         GLint modelMtx;

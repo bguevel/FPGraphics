@@ -8,7 +8,6 @@ uniform mat4 modelMatrix;
 // Material Uniforms
 uniform vec4 materialDiffuse;
 uniform vec4 materialSpecular;
-uniform vec4 materialAmbient;
 uniform float materialShine;
 
 // Spot light uniforms
@@ -23,9 +22,6 @@ uniform vec3 cameraPosition;
 // Light uniforms
 uniform vec3 light_direction;
 uniform vec3 light_color;
-
-// Material color
-uniform vec3 materialColor;
 
 // Attribute inputs
 layout(location = 0) in vec3 vPos;
@@ -65,7 +61,7 @@ void main() {
     vec3 lightVector = normalize(-light_direction);
 
     // Ambient component
-    vec3 ambient = 0.6 * light_color * vec3(materialAmbient);
+    vec3 ambient = 1.0 * light_color * vec3(materialDiffuse);
 
     // Diffuse component for directional light
 
@@ -82,13 +78,12 @@ void main() {
 
     // Spotlight diffuse component
     float diffuseFactor2 = max(dot(transformedNormal, lightToVertex), 0.0);
-    vec3 diffuse2 = diffuseFactor2 * vec3(1.0, 1.0, 1.0) * materialColor;
+    vec3 diffuse2 =vec3(1.0, 1.0, 1.0) * diffuseFactor2 * vec3(materialDiffuse);
 
     // Spotlight specular component
     vec3 reflection2 = reflect(-lightToVertex, transformedNormal);
-    float shininess2 = 16.0;
-    float specularFactor2 = pow(max(dot(reflection2, eyeDirection), 0.0), shininess2);
-    vec3 specular2 = specularFactor2 * vec3(1.0, 1.0, 1.0);
+    float specularFactor2 = pow(max(dot(reflection2, eyeDirection), 0.0), materialShine);
+    vec3 specular2 = vec3(1.0, 1.0, 1.0) * specularFactor2 * vec3(materialSpecular);
 
     // Apply spotlight intensity and attenuation
     if (myTheta >= spotLightOuterCutoff) {

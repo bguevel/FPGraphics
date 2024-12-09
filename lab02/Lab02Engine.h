@@ -148,10 +148,8 @@ private:
   /// \desc precomputed MVP matrix location
   GLint mvpMatrix;
   /// \desc material diffuse color location
-  GLint materialColor;
   GLint materialDiffuse;
   GLint materialSpecular;
-  GLint materialAmbient;
   GLint materialShine;
   GLint modelMatrix;
   // TODO #1: add new uniforms
