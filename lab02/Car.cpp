@@ -7,13 +7,18 @@
 #include <CSCI441/OpenGLUtils.hpp>
 #include <iostream>
 
-Car::Car( GLuint shaderProgramHandle, GLint mvpMtxUniformLocation, GLint normalMtxUniformLocation, GLint materialColorUniformLocation ) {
+Car::Car( GLuint shaderProgramHandle, GLint mvpMtxUniformLocation, GLint normalMtxUniformLocation, GLint materialColorUniformLocation, GLint materialDiffuseUniformLocation, GLint materialSpecularUniformLocation, GLint materialAmbientUniformLocation, GLint materialShineUniformLocation ) {
     _position = glm::vec3( 40.0f, 0.5f, 15.0f );
 
-    _shaderProgramHandle                            = shaderProgramHandle;
-    _shaderProgramUniformLocations.mvpMtx           = mvpMtxUniformLocation;
-    _shaderProgramUniformLocations.normalMtx        = normalMtxUniformLocation;
-    _shaderProgramUniformLocations.materialColor    = materialColorUniformLocation;
+    _shaderProgramHandle                             = shaderProgramHandle;
+    _shaderProgramUniformLocations.mvpMtx            = mvpMtxUniformLocation;
+    _shaderProgramUniformLocations.normalMtx         = normalMtxUniformLocation;
+    _shaderProgramUniformLocations.materialColor     = materialColorUniformLocation;
+    _shaderProgramUniformLocations.materialDiffuse   = materialDiffuseUniformLocation;
+    _shaderProgramUniformLocations.materialSpecular  = materialSpecularUniformLocation;
+    _shaderProgramUniformLocations.materialAmbient   = materialAmbientUniformLocation;
+    _shaderProgramUniformLocations.materialShine     = materialShineUniformLocation;
+
 
     _rotateAngle = _PI / 2.0f;
 
@@ -70,37 +75,35 @@ void Car::_drawBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
     modelMtx = glm::scale( modelMtx, _scaleBody );
 
     _computeAndSendMatrixUniforms(modelMtx, viewMtx, projMtx);
-    glProgramUniform3fv(_shaderProgramHandle, _shaderProgramUniformLocations.materialColor, 1, glm::value_ptr(_colorBody));
-
+    _sendMaterial(CSCI441::Materials::RUBY);
     CSCI441::drawSolidCube( 1.0f );
 
     glm::mat4 hoodMtx = glm::translate(modelMtx, glm::vec3(0.0f, -0.25f, -0.75f));
     hoodMtx = glm::scale(hoodMtx, glm::vec3(1.0f, 0.5f, 0.5f));
     _computeAndSendMatrixUniforms(hoodMtx, viewMtx, projMtx);
-    glProgramUniform3fv(_shaderProgramHandle, _shaderProgramUniformLocations.materialColor, 1, glm::value_ptr(_colorBody));
     CSCI441::drawSolidCube( 1.0f );
 
     glm::mat4 windshieldMtx = glm::translate(modelMtx, glm::vec3(0.0f, 0.0f, -0.4f));
     windshieldMtx = glm::scale(windshieldMtx, glm::vec3(0.9f, 0.7f, 0.5f));
     windshieldMtx = glm::rotate(windshieldMtx, glm::radians(40.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     _computeAndSendMatrixUniforms(windshieldMtx, viewMtx, projMtx);
-    glProgramUniform3fv(_shaderProgramHandle, _shaderProgramUniformLocations.materialColor, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f, 1.0f)));
+    _sendMaterial(CSCI441::Materials::CHROME);
     CSCI441::drawSolidCube( 1.0f );
 }
 
 void Car::_drawWheel(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx, GLboolean isLeft) {
     modelMtx = glm::scale(modelMtx, _scaleWheel);
     modelMtx = glm::rotate(modelMtx, glm::radians(isLeft ? wheelRotation : -wheelRotation), glm::vec3(0.0f,1.0f,0.0f));
-    fprintf(stdout, "Wheel rotation: %f\n", wheelRotation);
+    //fprintf(stdout, "Wheel rotation: %f\n", wheelRotation);
 
     _computeAndSendMatrixUniforms(modelMtx, viewMtx, projMtx);
-    glProgramUniform3fv(_shaderProgramHandle, _shaderProgramUniformLocations.materialColor, 1, glm::value_ptr(glm::vec3(1.0f, 0.0f, 0.0f)));
+    _sendMaterial(CSCI441::Materials::JADE);
     CSCI441::drawSolidCylinder(1.0f,1.0f,1.0f,10,10);
 
     glm::mat4 wheelTopMtx = glm::translate(modelMtx, glm::vec3(0.0f,5* _scaleWheel.y, 0.0f));
     wheelTopMtx = glm::rotate(wheelTopMtx, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     _computeAndSendMatrixUniforms(wheelTopMtx, viewMtx, projMtx);
-    glProgramUniform3fv(_shaderProgramHandle, _shaderProgramUniformLocations.materialColor, 1, glm::value_ptr(_colorBody));
+    _sendMaterial(CSCI441::Materials::BRONZE);
     CSCI441::drawSolidDisk(0.0f,1.0f,10,10);
 
 }
@@ -155,7 +158,7 @@ void Car::update() {
         _position += _velocity * _deltaTime; // Update position
     }
     if(isMoving) {
-        fprintf(stdout, "moving\n");
+        //fprintf(stdout, "moving\n");
         wheelRotation += 1.0f;
     }
 
@@ -175,3 +178,11 @@ void Car::_computeAndSendMatrixUniforms(glm::mat4 modelMtx, glm::mat4 viewMtx, g
     glm::mat3 normalMtx = glm::mat3( glm::transpose( glm::inverse( modelMtx )));
     glProgramUniformMatrix3fv( _shaderProgramHandle, _shaderProgramUniformLocations.normalMtx, 1, GL_FALSE, glm::value_ptr(normalMtx) );
 }
+
+void Car::_sendMaterial(const CSCI441::Materials::Material &mat) const {
+    glProgramUniform4fv(_shaderProgramHandle, _shaderProgramUniformLocations.materialDiffuse, 1, glm::value_ptr(mat.getDiffuse()));
+    glProgramUniform4fv(_shaderProgramHandle, _shaderProgramUniformLocations.materialSpecular, 1, glm::value_ptr(mat.getSpecular()));
+    glProgramUniform4fv(_shaderProgramHandle, _shaderProgramUniformLocations.materialAmbient, 1, glm::value_ptr(mat.getAmbient()));
+    glProgramUniform1f(_shaderProgramHandle, _shaderProgramUniformLocations.materialShine,mat.shininess);
+}
+

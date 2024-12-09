@@ -7,7 +7,6 @@
 #include <CSCI441/ShaderProgram.hpp>
 #include <glm/glm.hpp>
 #include "Being.h"
-#include "Marble.h"
 #include "Car.h"
 #include <vector>
 
@@ -150,6 +149,10 @@ private:
   GLint mvpMatrix;
   /// \desc material diffuse color location
   GLint materialColor;
+  GLint materialDiffuse;
+  GLint materialSpecular;
+  GLint materialAmbient;
+  GLint materialShine;
   GLint modelMatrix;
   // TODO #1: add new uniforms
   GLint vNormalMatrix;

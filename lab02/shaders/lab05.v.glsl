@@ -5,6 +5,12 @@ uniform mat4 mvpMatrix;
 uniform mat3 mtxNormal;
 uniform mat4 modelMatrix;
 
+// Material Uniforms
+uniform vec4 materialDiffuse;
+uniform vec4 materialSpecular;
+uniform vec4 materialAmbient;
+uniform float materialShine;
+
 // Spot light uniforms
 uniform vec3 spotLightPosition;
 uniform vec3 spotLightDirection;
@@ -59,17 +65,17 @@ void main() {
     vec3 lightVector = normalize(-light_direction);
 
     // Ambient component
-    vec3 ambient = 0.6 * light_color * materialColor;
+    vec3 ambient = 0.6 * light_color * vec3(materialAmbient);
 
     // Diffuse component for directional light
+
     float diffuseFactor = max(dot(transformedNormal, lightVector), 0.0);
-    vec3 diffuse = diffuseFactor * light_color * materialColor;
+    vec3 diffuse =  light_color * diffuseFactor *  vec3(materialDiffuse);
 
     // Specular component for directional light
     vec3 reflection = reflect(-lightVector, transformedNormal);
-    float shininess = 20.0;
-    float specularFactor = pow(max(dot(reflection, eyeDirection), 0.0), shininess);
-    vec3 specular = specularFactor * light_color;
+    float specularFactor = pow(max(dot(reflection, eyeDirection), 0.0), materialShine);
+    vec3 specular = light_color * specularFactor *  vec3(materialSpecular);
 
     // Initial color from directional light
     vec3 finalColor = ambient + diffuse + specular;

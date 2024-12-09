@@ -5,6 +5,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
+#include "CSCI441/materials.hpp"
 
 class Car
 {
@@ -20,7 +21,7 @@ class Car
     /// \param mvpMtxUniformLocation uniform location for the full precomputed MVP matrix
     /// \param normalMtxUniformLocation uniform location for the precomputed Normal matrix
     /// \param materialColorUniformLocation uniform location for the material diffuse color
-    Car( GLuint shaderProgramHandle, GLint mvpMtxUniformLocation, GLint normalMtxUniformLocation, GLint materialColorUniformLocation );
+    Car( GLuint shaderProgramHandle, GLint mvpMtxUniformLocation, GLint normalMtxUniformLocation, GLint materialColorUniformLocation , GLint materialDiffuseUniformLocation, GLint materialSpecularUniformLocation, GLint materialAmbientUniformLocation, GLint materialShineUniformLocation);
 
     /// \desc draws the model plane for a given MVP matrix
     /// \param modelMtx existing model matrix to apply to plane
@@ -80,6 +81,10 @@ class Car
         GLint normalMtx;
         /// \desc location of the material diffuse color
         GLint materialColor;
+        GLint materialDiffuse;
+        GLint materialSpecular;
+        GLint materialAmbient;
+        GLint materialShine;
 
         GLint modelMtx;
     } _shaderProgramUniformLocations;
@@ -105,6 +110,7 @@ class Car
     /// \param viewMtx camera view matrix
     /// \param projMtx camera projection matrix
     void _computeAndSendMatrixUniforms( glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx ) const;
+    void _sendMaterial(const CSCI441::Materials::Material&) const;
 };
 
 #endif // LAB05_BEING_H
