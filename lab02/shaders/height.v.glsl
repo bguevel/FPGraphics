@@ -19,10 +19,13 @@ layout(location = 2) in vec2 vTexCoord; // Vertex texture coordinate
 out vec3 fragPosition;    // World-space position of the fragment
 out vec3 fragNormal;      // World-space normal of the fragment
 out vec3 viewDir;         // Direction from fragment to camera
+out vec2 fTCoord;
 
 void main() {
     // Sample height from the height map using texture coordinates
     float height = texture(heightMap, vTexCoord).r * maxHeight;
+
+    fTCoord = vTexCoord;
 
 
     // Apply displacement to the vertex position along the normal

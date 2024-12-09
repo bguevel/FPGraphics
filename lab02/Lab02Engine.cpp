@@ -99,6 +99,9 @@ void Lab02Engine::mSetupShaders() {
     _terrainShaderUniformLocations.modelMatrix         = _terrainShaderProgram->getUniformLocation("modelMatrix");
     _terrainShaderUniformLocations.normalMatrix        = _terrainShaderProgram->getUniformLocation("normalMatrix");
     _terrainShaderUniformLocations.heightMap           = _terrainShaderProgram->getUniformLocation("heightMap");
+    _terrainShaderUniformLocations.trackFilter         = _terrainShaderProgram->getUniformLocation("trackFilter");
+    _terrainShaderUniformLocations.trackTexture        = _terrainShaderProgram->getUniformLocation("trackTexture");
+    _terrainShaderUniformLocations.sceneTexture        = _terrainShaderProgram->getUniformLocation("sceneTexture");
     _terrainShaderUniformLocations.maxHeight           = _terrainShaderProgram->getUniformLocation("maxHeight");
     _terrainShaderUniformLocations.materialColor       = _terrainShaderProgram->getUniformLocation("materialColor");
     _terrainShaderUniformLocations.camPosition         = _terrainShaderProgram->getUniformLocation("cameraPosition");
@@ -136,6 +139,15 @@ void Lab02Engine::mSetupBuffers() {
                         _lightingShaderUniformLocations.isEmitter);
     // Load the height map first
     if(!loadHeightMap("heightmap.png")) { // Ensure "heightmap.png" is in the correct directory
+        exit(EXIT_FAILURE);
+    }
+    if ((_trackFilter = _loadAndRegisterTrackFilter("trackFilter.png")) == -1) {
+        exit(EXIT_FAILURE);
+    }
+    if ((_trackTexture = _loadAndRegisterTexture("roadTexture.jpg")) == -1) {
+        exit(EXIT_FAILURE);
+    }
+    if ((_sceneTexture = _loadAndRegisterTrackFilter("grassTexture.jpg")) == -1) {
         exit(EXIT_FAILURE);
     }
     _skyTex = _loadAndRegisterSkyboxTexture( "cubeMapFrozen.jpg" );
@@ -236,6 +248,87 @@ bool Lab02Engine::loadHeightMap(const std::string& filepath) {
 
     stbi_image_free(data);
     return true;
+}
+
+GLint Lab02Engine::_loadAndRegisterTexture(const char *FILENAME) {
+    // our handle to the GPU
+    GLuint textureHandle = 0;
+
+    // enable setting to prevent image from being upside down
+    stbi_set_flip_vertically_on_load(true);
+
+    // will hold image parameters after load
+    GLint imageWidth, imageHeight, imageChannels;
+    // load image from file
+    GLubyte *data = stbi_load(FILENAME, &imageWidth, &imageHeight, &imageChannels, 0);
+    // if data was read from file
+    if (data) {
+        const GLint STORAGE_TYPE = (imageChannels == 4 ? GL_RGBA : GL_RGB);
+        glGenTextures(1, &textureHandle);
+        glBindTexture(GL_TEXTURE_2D, textureHandle);
+        // set texture parameters
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, STORAGE_TYPE, imageWidth, imageHeight, 0, STORAGE_TYPE, GL_UNSIGNED_BYTE, data);
+
+
+        fprintf(stdout, "[INFO]: %s texture map read in with handle %d\n", FILENAME, textureHandle);
+
+        // release image memory from CPU - it now lives on the GPU
+        stbi_image_free(data);
+    } else {
+        // load failed
+        fprintf(stderr, "[ERROR]: Could not load texture map \"%s\"\n", FILENAME);
+    }
+
+    // return generated texture handle
+    return textureHandle;
+}
+
+GLint Lab02Engine::_loadAndRegisterTrackFilter(const char *FILENAME) {
+    // our handle to the GPU
+    GLuint textureHandle = 0;
+
+    // enable setting to prevent image from being upside down
+    stbi_set_flip_vertically_on_load(true);
+
+    // will hold image parameters after load
+    GLint imageWidth, imageHeight, imageChannels;
+    // load image from file
+    GLubyte *data = stbi_load(FILENAME, &imageWidth, &imageHeight, &imageChannels, 0);
+    // if data was read from file
+    if (data) {
+        const GLint STORAGE_TYPE = (imageChannels == 1 ? GL_DEPTH_COMPONENT : GL_RGB);
+        glGenTextures(1, &textureHandle);
+        glBindTexture(GL_TEXTURE_2D, textureHandle);
+        // set texture parameters
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, STORAGE_TYPE, imageWidth, imageHeight, 0, STORAGE_TYPE, GL_UNSIGNED_BYTE, data);
+
+        fprintf(stdout, "[INFO]: %s height map read in with handle %d\n", FILENAME, textureHandle);
+
+        // release image memory from CPU - it now lives on the GPU
+        stbi_image_free(data);
+    } else {
+        // load failed
+        fprintf(stderr, "[ERROR]: Could not load texture map \"%s\"\n", FILENAME);
+    }
+
+    // return generated texture handle
+    return textureHandle;
 }
 
 float Lab02Engine::getTerrainHeight(float x, float z) const {
@@ -361,9 +454,18 @@ void Lab02Engine::_renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) const {
     _terrainShaderProgram->useProgram();
 
     // Bind heightmap texture
-    glActiveTexture(GL_TEXTURE0);
+    glActiveTexture(GL_TEXTURE0 + HEIGHT_MAP_SLOT);
     glBindTexture(GL_TEXTURE_2D, _heightMapTextureID);
-    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.heightMap, 0);
+    glActiveTexture(GL_TEXTURE0 + TRACK_FILTER_SLOT);
+    glBindTexture(GL_TEXTURE_2D, _trackFilter);
+    glActiveTexture(GL_TEXTURE0 + TRACK_TEXTURE_SLOT);
+    glBindTexture(GL_TEXTURE_2D, _trackTexture);
+    glActiveTexture(GL_TEXTURE0 + SCENE_TEXTURE_SLOT);
+    glBindTexture(GL_TEXTURE_2D, _sceneTexture);
+    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.heightMap, HEIGHT_MAP_SLOT);
+    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.trackFilter, TRACK_FILTER_SLOT);
+    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.trackTexture, TRACK_TEXTURE_SLOT);
+    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.sceneTexture, SCENE_TEXTURE_SLOT);
     glm::vec2 texelSize(1.0f / static_cast<float>(heightMapWidth),
                     1.0f / static_cast<float>(heightMapHeight));
     _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.texelSize, texelSize);

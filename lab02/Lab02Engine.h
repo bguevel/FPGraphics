@@ -68,6 +68,8 @@ public:
 
  bool loadHeightMap(const std::string& filepath);
  void generateTerrainMesh();
+ GLint _loadAndRegisterTrackFilter(const char *FILENAME);
+ GLint _loadAndRegisterTexture(const char *FILENAME);
 
 
  const float WORLD_BOUNDARY = 100.0f; // Adjust based on your world size
@@ -87,6 +89,16 @@ protected:
 
 private:
  GLint _skyTex;
+ GLint _trackFilter;
+ GLint _trackTexture;
+ GLint _sceneTexture;
+ const GLint HEIGHT_MAP_SLOT = 0;
+ const GLint TRACK_FILTER_SLOT = 1;
+ const GLint TRACK_TEXTURE_SLOT = 2;
+ const GLint SCENE_TEXTURE_SLOT = 3;
+
+
+
  CSCI441::ShaderProgram* _skyboxShaderProgram;
 
  struct SkyboxShaderUniformLocations
@@ -111,6 +123,9 @@ private:
   GLint modelMatrix;
   GLint normalMatrix;
   GLint heightMap;
+  GLint trackFilter;
+  GLint trackTexture;
+  GLint sceneTexture;
   GLint maxHeight;
   GLint materialColor;
   GLint camPosition;
