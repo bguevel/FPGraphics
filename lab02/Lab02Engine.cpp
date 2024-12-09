@@ -2,7 +2,7 @@
 
 #include <CSCI441/SimpleShader.hpp>
 #include <CSCI441/objects.hpp>
-
+#include <CSCI441/ArcballCam.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <cmath>
@@ -37,14 +37,17 @@ Lab02Engine::Lab02Engine()
     _gridVAO = 0;
     _numGridPoints = 0;
     _gridColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    _pFreeCam = new FreeCam();
     _mousePosition = glm::vec2(MOUSE_UNINITIALIZED, MOUSE_UNINITIALIZED );
     _leftMouseButtonState = GLFW_RELEASE;
     for(auto& _key : _keys) _key = GL_FALSE;
+    _cams = new CSCI441::Camera*[numCams];
 }
 
 Lab02Engine::~Lab02Engine() {
-    delete _pFreeCam;
+    for (int i = 0; i < numCams; ++i) {
+        delete _cams[i];
+    }
+    delete[] _cams;
 }
 
 void Lab02Engine::mSetupGLFW() {
@@ -144,17 +147,28 @@ void Lab02Engine::mSetupBuffers() {
 }
 
 void Lab02Engine::mSetupScene() {
-    _pFreeCam = new FreeCam();
-    _pFreeCam->setLookAtPoint(_pPlayerCar->getPosition());
-    _pFreeCam->setTheta(0 );
-    _pFreeCam->setPhi(1 );
-    _pFreeCam->setRadius(15);
-    _pFreeCam->recomputeOrientation();
+    //_pFreeCam = new FreeCam();
     _cameraSpeed = glm::vec2(0.25f, 0.02f);
+
+    _cams[CAM_ID::ARC_CAM] = new CSCI441::ArcballCam();
+    _cams[CAM_ID::ARC_CAM]->setLookAtPoint(_pPlayerCar->getPosition());
+    _cams[CAM_ID::ARC_CAM]->setRadius(15);
+    _cams[CAM_ID::ARC_CAM]->setTheta(-M_PI / 3.0f );
+    _cams[CAM_ID::ARC_CAM]->setPhi(8*M_PI/6);
+    _cams[CAM_ID::ARC_CAM]->recomputeOrientation();
+
+    _cams[CAM_ID::FIXED_CAM] = new CSCI441::ArcballCam();
+    _cams[CAM_ID::FIXED_CAM]->setLookAtPoint(_pPlayerCar->getPosition());
+    _cams[CAM_ID::FIXED_CAM]->setRadius(15);
+    _cams[CAM_ID::FIXED_CAM]->setTheta(M_PI/2);
+    _cams[CAM_ID::FIXED_CAM]->setPhi(8*M_PI/6);
+    _cams[CAM_ID::FIXED_CAM]->recomputeOrientation();
+
+    camID = CAM_ID::FIXED_CAM;
 
     // TODO #6: set lighting uniforms
     glm::vec3 lightDirection = glm::vec3(-1.0f, -1.0f, -1.0f);
-    glm::vec3 lightColor = glm::vec3(0.2f, 0.2f, 0.02);
+    glm::vec3 lightColor = glm::vec3(0.2f, 0.2f, 0.2f);
     glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle(), _lightingShaderUniformLocations.lightColor, 1, glm::value_ptr(lightColor));
     glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle(), _lightingShaderUniformLocations.lightPosition, 1, glm::value_ptr(lightDirection));
 
@@ -164,7 +178,6 @@ void Lab02Engine::mSetupScene() {
     glm::vec3 spotLightDirection = glm::vec3(0.0f,-1.0f,0.0f);
     GLfloat spotLightCutoff      = glm::cos( glm::radians( 40.0f ) );
     GLfloat spotLightOuterCutoff = glm::cos( glm::radians( 70.0f ) );
-    glm::vec3 cameraPos = _pFreeCam->getPosition();
 
     glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.spotLightPosition, 1, glm::value_ptr( spotLightPosition ) );
 
@@ -177,7 +190,7 @@ void Lab02Engine::mSetupScene() {
     // Pass lighting data to terrain shader
     glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.lightPosition, 1, glm::value_ptr(lightDirection));
     glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.lightColor, 1, glm::value_ptr(lightColor));
-    glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.camPosition, 1, glm::value_ptr(_pFreeCam->getPosition()));
+    glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.camPosition, 1, glm::value_ptr(_cams[camID]->getPosition()));
     // Pass spotlight data
     glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.spotLightPosition, 1, glm::value_ptr(spotLightPosition));
     glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.spotLightDirection, 1, glm::value_ptr(spotLightDirection));
@@ -296,13 +309,13 @@ void Lab02Engine::_computeAndSendMatrixUniforms(glm::mat4 modelMtx, glm::mat4 vi
     glm::mat3 normalMtx = glm::mat3(glm::transpose(glm::inverse(modelMtx)));
     _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.vNormalMatrix, normalMtx);
     // Set camera position uniform
-    _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.camPosition, _pFreeCam->getPosition());
+    _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.camPosition, _cams[camID]->getPosition());
 
     // For terrain shader
     _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.mvpMatrix, mvpMtx);
     _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.modelMatrix, modelMtx);
     _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.normalMatrix, normalMtx);
-    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.camPosition, _pFreeCam->getPosition());
+    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.camPosition, _cams[camID]->getPosition());
 }
 
 void Lab02Engine::_renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) const {
@@ -375,7 +388,7 @@ void Lab02Engine::_renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) const {
     // Compute and send matrix uniforms for lighting shader
     glm::mat4 modelMtxPlane = glm::mat4(1.0f);
     glm::vec3 playerPos = _pPlayerCar->getPosition();
-    printf("Player Position: (%f, %f, %f)\n", playerPos.x, playerPos.y, playerPos.z);
+    fprintf(stdout,"Player Position: (%f, %f, %f)\n", playerPos.x, playerPos.y, playerPos.z);
     modelMtxPlane = glm::translate(modelMtxPlane, _pPlayerCar->getPosition());
     _computeAndSendMatrixUniforms(modelMtxPlane, viewMtx, projMtx);
 
@@ -405,34 +418,14 @@ void Lab02Engine::_updateScene(){
         playerPos.y = terrainHeight + heightOffset;
         _pPlayerCar->setPosition(playerPos);
     }
-
-    // still original functionality from lab5 to move the cam
-    if( _keys[GLFW_KEY_SPACE] ) {
-        // go backward if shift held down
-        if( _keys[GLFW_KEY_LEFT_SHIFT] || _keys[GLFW_KEY_RIGHT_SHIFT] ) {
-            _pFreeCam->moveBackward(_cameraSpeed.x);
-        }
-        // go forward
-        else {
-            _pFreeCam->moveForward(_cameraSpeed.x);
-        }
-    }
     //keeping the original functionality with moving the cam
-    // turn right
-    if(_keys[GLFW_KEY_RIGHT] ) {
-        _pFreeCam->rotate(_cameraSpeed.y, 0.0f);
+    if(_keys[GLFW_KEY_1]) {
+        //Switch to Fixed
+        camID = CAM_ID::FIXED_CAM;
     }
-    // turn left
-    if( _keys[GLFW_KEY_LEFT] ) {
-        _pFreeCam->rotate(-_cameraSpeed.y, 0.0f);
-    }
-    // pitch up
-    if(_keys[GLFW_KEY_UP] ) {
-        _pFreeCam->rotate(0.0f, _cameraSpeed.y);
-    }
-    // pitch down
-    if(_keys[GLFW_KEY_DOWN] ) {
-        _pFreeCam->rotate(0.0f, -_cameraSpeed.y);
+    else if (_keys[GLFW_KEY_2]) {
+        //Switch to arc
+        camID = CAM_ID::ARC_CAM;
     }
     if(_keys[GLFW_KEY_W] ) {
         if(!(_pPlayerCar->getPosition().x +0.2f < 100.0f && _pPlayerCar->getPosition().z +0.2f < 100.0f && _pPlayerCar->getPosition().x +0.2f > -100.0f && _pPlayerCar->getPosition().z +0.2f > -100.0f)) { // bounds checking, so that we can stay within the created world
@@ -459,8 +452,12 @@ void Lab02Engine::_updateScene(){
         if (_pPlayerCar->isMoving) {
             _pPlayerCar->rotateSelf(-0.1f); // give the axis of travel and whether the axis involves the A key as then we need to inverse the angle
             _pPlayerCar->setForwardDirection();
+            if (camID == CAM_ID::FIXED_CAM) {
+                _cams[camID]->setTheta(_cams[camID]->getTheta() + 0.1f);
+            }
         }
         _pPlayerCar->isTurnRight = true;
+
     }
     else {
         _pPlayerCar->isTurnRight = false;
@@ -469,18 +466,22 @@ void Lab02Engine::_updateScene(){
         if (_pPlayerCar->isMoving) {
             _pPlayerCar->rotateSelf(0.1f); // give the axis of travel and whether the axis involves the A key as then we need to inverse the angle
             _pPlayerCar->setForwardDirection();
+            if (camID == CAM_ID::FIXED_CAM) {
+                _cams[camID]->setTheta(_cams[camID]->getTheta() - 0.1f);
+            }
         }
         _pPlayerCar->isTurnLeft = true;
+
     }
     else {
         _pPlayerCar->isTurnLeft = false;
     }
     _pPlayerCar->setForwardDirection();
-    _pFreeCam->setLookAtPoint(_pPlayerCar->getPosition());
-    _pFreeCam->recomputeOrientation();
+    fprintf(stdout, "Camera position (%f,%f)\n", _cams[camID]->getPosition().x, _cams[camID]->getPosition().z);
+    _cams[camID]->setLookAtPoint(_pPlayerCar->getPosition());
+    fprintf(stdout, "Camera position After (%f,%f)\n", _cams[camID]->getPosition().x, _cams[camID]->getPosition().z);
+    _cams[camID]->recomputeOrientation();
     _pPlayerCar->update();
-    // Update marbles
-    //printf("my current y position is %f\n", _pPlayerCar->getPosition().y);
 
 }
 
@@ -519,15 +520,15 @@ void Lab02Engine::handleCursorPositionEvent(glm::vec2 currMousePosition) {
     if(_leftMouseButtonState == GLFW_PRESS) {
         if(_keys[GLFW_KEY_LEFT_SHIFT] || _keys[GLFW_KEY_RIGHT_SHIFT]) { // this is to check if shift is being pressed so we can zoom
             if(_mousePosition.y - currMousePosition.y < 0) { // zoom in or out
-                _pFreeCam->moveBackward(_cameraSpeed.x);
+                _cams[camID]->moveBackward(_cameraSpeed.x);
             }
             else {
-                _pFreeCam->moveForward(_cameraSpeed.x);
+                _cams[camID]->moveForward(_cameraSpeed.x);
             }
         }
         else {
             // rotate the camera by the distance the mouse moved
-            _pFreeCam->rotate((currMousePosition.x - _mousePosition.x) * 0.005f,
+            if (camID != CAM_ID::FIXED_CAM) _cams[camID]->rotate((currMousePosition.x - _mousePosition.x) * 0.005f,
                              (_mousePosition.y - currMousePosition.y) * 0.005f );
         }
     }
@@ -801,15 +802,11 @@ void Lab02Engine::run() {
         // the GL_PROJECTION matrix governs properties of the view coordinates;
         // i.e. what gets seen - use a perspective projection that ranges
         // with a FOV of 45 degrees, for our current aspect ratio, and Z ranges from [0.001, 1000].
-        glm::mat4 projMtx = glm::perspective( 45.0f, (GLfloat)mWindowWidth / (GLfloat)mWindowHeight, 0.001f, 1000.0f );
-       // CSCI441::SimpleShader3::setProjectionMatrix(projMtx);
-
         // set up our look at matrix to position our camera
-        glm::mat4 viewMtx = _pFreeCam->getViewMatrix();
         // multiply by the look at matrix - this is the same as our view matrix
         //CSCI441::SimpleShader3::setViewMatrix(viewMtx);
 
-        _renderScene(_pFreeCam->getViewMatrix(), _pFreeCam->getProjectionMatrix());					// draw everything to the window
+        _renderScene(_cams[camID]->getViewMatrix(), _cams[camID]->getProjectionMatrix());					// draw everything to the window
         _updateScene();
         glfwSwapBuffers(mpWindow);       // flush the OpenGL commands and make sure they get rendered!
         glfwPollEvents();				// check for any events and signal to redraw screen

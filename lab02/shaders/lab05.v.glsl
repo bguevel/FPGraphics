@@ -6,29 +6,32 @@ uniform mat3 mtxNormal;
 uniform mat4 modelMatrix;
 
 // Material Uniforms
-uniform vec4 materialDiffuse;
-uniform vec4 materialSpecular;
-uniform float materialShine;
+//uniform vec4 materialDiffuse;
+//uniform vec4 materialSpecular;
+//uniform float materialShine;
 
 // Spot light uniforms
-uniform vec3 spotLightPosition;
-uniform vec3 spotLightDirection;
-uniform float spotLightCutoff;
-uniform float spotLightOuterCutoff;
+//uniform vec3 spotLightPosition;
+//uniform vec3 spotLightDirection;
+//uniform float spotLightCutoff;
+//uniform float spotLightOuterCutoff;
 
 // Camera position
 uniform vec3 cameraPosition;
 
 // Light uniforms
 uniform vec3 light_direction;
-uniform vec3 light_color;
+//uniform vec3 light_color;
 
 // Attribute inputs
 layout(location = 0) in vec3 vPos;
 layout(location = 1) in vec3 vertexnorm;
 
 // Varying outputs
-layout(location = 0) out vec3 color;
+//layout(location = 0) out vec3 color;
+out vec3 fragPosition;    // World-space position of the fragment
+out vec3 fragNormal;      // World-space normal of the fragment
+out vec3 viewDir;         // Direction from fragment to camera
 
 void main() {
     // Transform vertex position to clip space
@@ -36,10 +39,13 @@ void main() {
 
     // Transform position to world space
     vec3 worldPos = vec3(modelMatrix * vec4(vPos, 1.0));
+    fragPosition = worldPos;
 
     // Transform normal to world space and normalize
     vec3 transformedNormal = normalize(mtxNormal * vertexnorm);
-
+    fragNormal = transformedNormal;
+    viewDir = normalize(cameraPosition - fragPosition);
+    /*
     // Compute the vector from the light to the vertex
     vec3 lightToVertex = normalize(spotLightPosition - worldPos);
 
@@ -100,4 +106,5 @@ void main() {
 
     // Output the final color
     color = finalColor;
+    */
 }

@@ -6,14 +6,11 @@
 #include <CSCI441/OpenGLEngine.hpp>
 #include <CSCI441/ShaderProgram.hpp>
 #include <glm/glm.hpp>
-#include "Being.h"
 #include "Car.h"
 #include <vector>
 
 class Lab02Engine final : public CSCI441::OpenGLEngine {
 public:
- void _moveMarbles();
- void _collideMarblesWithMarbles();
     Lab02Engine();
     ~Lab02Engine() final;
  /// \desc value off-screen to represent mouse has not begun interacting with window yet
@@ -33,8 +30,6 @@ public:
     /**
      * @brief returns a pointer to our free cam object
      */
-    [[nodiscard]] FreeCam* getFreeCam() const { return _pFreeCam; }
-
     /**
      * @brief returns the last location of the mouse in window coordinates
      * @return last location of mouse in window coordinates
@@ -174,6 +169,18 @@ private:
  } _lightingShaderAttributeLocations;
  CSCI441::ShaderProgram* _lightingShaderProgram = nullptr;
  Car* _pPlayerCar;
+
+ //Camera Information
+ CSCI441::Camera** _cams;
+
+ GLint camID;
+
+ GLint numCams = 2;
+
+ enum CAM_ID {
+  ARC_CAM = 0,
+  FIXED_CAM = 1,
+};
     /**
      * @brief Creates a VAO to draw a simple grid environment with buildings for the user to navigate through.
      */
@@ -198,8 +205,6 @@ private:
     /**
      * @brief pointer to the camera in our world set up as a FreeCam
      */
-    FreeCam* _pFreeCam;
-
     /**
      * @brief last location of the mouse in window coordinates
      */
