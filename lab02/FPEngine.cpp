@@ -87,6 +87,7 @@ void FPEngine::mSetupShaders( )
     _terrainShaderUniformLocations.trackFilter          = _terrainShaderProgram->getUniformLocation( "trackFilter" );
     _terrainShaderUniformLocations.trackTexture         = _terrainShaderProgram->getUniformLocation( "trackTexture" );
     _terrainShaderUniformLocations.sceneTexture         = _terrainShaderProgram->getUniformLocation( "sceneTexture" );
+    _terrainShaderUniformLocations.eggTexture           = _terrainShaderProgram->getUniformLocation("eggTexture");
     _terrainShaderUniformLocations.maxHeight            = _terrainShaderProgram->getUniformLocation( "maxHeight" );
     _terrainShaderUniformLocations.camPosition          = _terrainShaderProgram->getUniformLocation( "cameraPosition" );
     _terrainShaderUniformLocations.lightColor           = _terrainShaderProgram->getUniformLocation( "light_color" );
@@ -96,6 +97,7 @@ void FPEngine::mSetupShaders( )
     _terrainShaderUniformLocations.spotLightCutoff      = _terrainShaderProgram->getUniformLocation( "spotLightCutoff" );
     _terrainShaderUniformLocations.spotLightOuterCutoff = _terrainShaderProgram->getUniformLocation( "spotLightOuterCutoff" );
     _terrainShaderUniformLocations.texelSize            = _terrainShaderProgram->getUniformLocation( "texelSize" );
+    _terrainShaderUniformLocations.isReverse            = _terrainShaderProgram->getUniformLocation("isReverse");
     // Terrain Shader Attributes
     _terrainShaderAttributeLocations.vPos      = _terrainShaderProgram->getAttributeLocation( "vPos" );
     _terrainShaderAttributeLocations.vNormal   = _terrainShaderProgram->getAttributeLocation( "vNormal" );
@@ -150,9 +152,13 @@ void FPEngine::mSetupBuffers( )
     {
         exit( EXIT_FAILURE );
     }
-    if ( ( _trackTexture = _loadAndRegisterTexture( "roadTexture.jpg" ) ) == -1 )
+    if ( ( _trackTexture = _loadAndRegisterTexture( "roadTexture2.jpg" ) ) == -1 )
     {
         exit( EXIT_FAILURE );
+    }
+    if ((_easterEggTexture = _loadAndRegisterTexture("rainbowRoadTexture.jpg")) == -1)
+    {
+        exit(EXIT_FAILURE);
     }
     if ( ( _sceneTexture = _loadAndRegisterTrackFilter( "grassTexture.jpg" ) ) == -1 )
     {
@@ -658,12 +664,18 @@ void FPEngine::_renderScene( glm::mat4 viewMtx, glm::mat4 projMtx ) const
     glBindTexture( GL_TEXTURE_2D, _trackFilter );
     glActiveTexture( GL_TEXTURE0 + TRACK_TEXTURE_SLOT );
     glBindTexture( GL_TEXTURE_2D, _trackTexture );
+    glActiveTexture(GL_TEXTURE0 + EASTER_TEXTURE_SLOT);
+    glBindTexture(GL_TEXTURE_2D, _easterEggTexture);
     glActiveTexture( GL_TEXTURE0 + SCENE_TEXTURE_SLOT );
     glBindTexture( GL_TEXTURE_2D, _sceneTexture );
     _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.heightMap, HEIGHT_MAP_SLOT );
     _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.trackFilter, TRACK_FILTER_SLOT );
     _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.trackTexture, TRACK_TEXTURE_SLOT );
     _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.sceneTexture, SCENE_TEXTURE_SLOT );
+    _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.eggTexture, EASTER_TEXTURE_SLOT);
+    //fprintf(stdout, "isReverse: %d\n", isReverse);
+    //_terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.isReverse, isReverse);
+    glProgramUniform1i(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.isReverse, isReverse);
     glm::vec2 texelSize( 1.0f / static_cast<float>( heightMapWidth ), 1.0f / static_cast<float>( heightMapHeight ) );
     _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.texelSize, texelSize );
 
@@ -827,6 +839,58 @@ void FPEngine::_updateScene( )
     _lastTime          = currentTime;
 
     glm::vec3 playerPos = _pPlayerCar->getPosition( );
+    //fprintf(stdout, "(X: %f, Z: %f)\n", playerPos.x, playerPos.z);
+    //fprintf(stdout, "%d, %d, %d, %d\n", startCheckpoint, firstCheckpoint, secondCheckpoint, thirdCheckpoint );
+    //Check Checkpoints
+    if (!startCheckpoint) {
+        if (abs(playerPos.x) < 5.0f && playerPos.z > 0) {
+            startCheckpoint = true;
+            checkOrder[numOrder] = 0;
+            numOrder++;
+            fprintf(stdout, "start\n");
+        }
+    }
+    if (!firstCheckpoint) {
+        if (abs(playerPos.z) < 5.0f && playerPos.x > 0) {
+            firstCheckpoint = true;
+            checkOrder[numOrder] = 1;
+            numOrder++;
+            fprintf(stdout, "1st\n");
+        }
+    }
+    if (!secondCheckpoint) {
+        if (abs(playerPos.x) < 5.0f && playerPos.z < 0) {
+            secondCheckpoint = true;
+            checkOrder[numOrder] = 2;
+            numOrder++;
+            fprintf(stdout, "2nd\n");
+        }
+    }
+    if (!thirdCheckpoint) {
+        if (abs(playerPos.z) < 5.0f && playerPos.x < 0) {
+            thirdCheckpoint = true;
+            checkOrder[numOrder] = 3;
+            numOrder++;
+            fprintf(stdout, "3rd\n");
+        }
+    }
+
+    if (numOrder == 4) {
+        fprintf(stdout, "Checking\n");
+        numOrder = 1;
+        isReverse = 1;
+        firstCheckpoint = false;
+        secondCheckpoint = false;
+        thirdCheckpoint = false;
+        if (checkOrder[1] == 1) isReverse = 0;
+        /*
+        for (int i = 1; i < 4; i++) {
+            if (checkOrder[i] == i) isReverse = 0;
+            fprintf(stdout, "%d:%d, ", i, checkOrder[i]);
+        }
+        */
+        fprintf(stdout, "isReverse: %d\n", isReverse);
+    }
 
     // Retrieve the terrain height at the plane's current X and Z
     float terrainHeightPlayer = getTerrainHeight( playerPos.x, playerPos.z );

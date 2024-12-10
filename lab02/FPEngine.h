@@ -109,10 +109,12 @@ class FPEngine final : public CSCI441::OpenGLEngine
         GLuint _trackFilter{};
         GLuint _trackTexture{};
         GLuint _sceneTexture{};
+        GLuint _easterEggTexture{};
         const GLint HEIGHT_MAP_SLOT    = 0;
         const GLint TRACK_FILTER_SLOT  = 1;
         const GLint TRACK_TEXTURE_SLOT = 2;
         const GLint SCENE_TEXTURE_SLOT = 3;
+        const GLint EASTER_TEXTURE_SLOT = 4;
 
         CSCI441::ShaderProgram* _skyboxShaderProgram{};
 
@@ -143,6 +145,7 @@ class FPEngine final : public CSCI441::OpenGLEngine
                 GLint trackFilter;
                 GLint trackTexture;
                 GLint sceneTexture;
+                GLint eggTexture;
                 GLint maxHeight;
                 GLint materialColor;
                 GLint camPosition;
@@ -152,6 +155,7 @@ class FPEngine final : public CSCI441::OpenGLEngine
                 GLint spotLightDirection;
                 GLint spotLightCutoff;
                 GLint spotLightOuterCutoff;
+                GLint isReverse;
                 GLint texelSize; // Add this line
                                  // Add any other uniforms if needed
         } _terrainShaderUniformLocations{};
@@ -234,6 +238,17 @@ class FPEngine final : public CSCI441::OpenGLEngine
 
         //Trees
         std::vector<Tree> _trees;
+
+        //Race Checkpoints
+        GLboolean startCheckpoint = true;//Start, X = 0 Z > 0
+        GLboolean firstCheckpoint = false; //First Quarter,  Z = 0 X > 0
+        GLboolean secondCheckpoint = false; // Halfway, X = 0 Z < 0
+        GLboolean thirdCheckpoint = false; // 3rd Quarter, Z = 0 X < 0
+
+        GLint checkOrder[4] = {0,-1,-1,-1};
+        GLuint numOrder = 1;
+
+        GLuint isReverse = 0;
 
         CSCI441::ShaderProgram* _speedLineShaderProgram = nullptr;
 

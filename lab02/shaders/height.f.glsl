@@ -18,6 +18,9 @@ uniform sampler2D trackFilter;     // Height map texture
 uniform sampler2D trackTexture;
 uniform sampler2D sceneTexture;
 
+uniform sampler2D eggTexture;
+uniform int isReverse;
+
 
 // Inputs from Vertex Shader
 in vec3 fragNormal;            // World-space normal of the fragment
@@ -31,7 +34,13 @@ out vec4 fragColor;
 void main() {
 
     vec3 color;
-    if (float(texture(trackFilter, fTCoord)) != 1.0f) color = vec3(texture(trackTexture, fTCoord));
+    if (float(texture(trackFilter, fTCoord)) != 1.0f) {
+        if (isReverse == 0) color = vec3(texture(trackTexture, fTCoord));
+        else {
+            //color = vec3(sin(fragPosition.x), sin(fragPosition.y), sin(fragPosition.z) );
+            color = vec3(texture(eggTexture, fTCoord));
+        }
+    }
     else color = vec3(texture(sceneTexture, fTCoord));
 
     // Normalize the input normal vector
