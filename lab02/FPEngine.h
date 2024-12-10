@@ -90,7 +90,7 @@ class FPEngine final : public CSCI441::OpenGLEngine
 
         static glm::vec3 evaluateBezier( float t, const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3 );
 
-        float arcLengthToT( float s, const std::vector<float>& arcLengths, const std::vector<float>& sampleTs );
+        static float arcLengthToT( float s, const std::vector<float>& arcLengths, const std::vector<float>& sampleTs );
 
     protected:
         void mSetupGLFW( ) final;
@@ -190,7 +190,6 @@ class FPEngine final : public CSCI441::OpenGLEngine
                 GLint vNormalMatrix;
                 GLint lightPosition;
                 GLint lightColor;
-                GLint ViewMtx;
                 GLint camPosition;
 
                 GLint spotLightPosition;
@@ -229,11 +228,6 @@ class FPEngine final : public CSCI441::OpenGLEngine
 
         struct SpeedLineShaderUniformLocations {
                 GLint mvpMatrix;
-                GLint modelMatrix;
-                GLint cartPosition;
-                GLint cartDirection;
-                GLint materialColor;
-                GLint cartSpeed;
         } _speedLineUniformLocations{};
 
         //Trees
@@ -352,6 +346,11 @@ class FPEngine final : public CSCI441::OpenGLEngine
         float _speedThresholdAI = 3.0f;
 
         glm::vec3 _convertToWorldCoords(int px, int pz);
+
+        // Speed Lines
+        GLuint _speedLineVAO, _speedLineVBO;
+
+        void _createSpeedLineBuffers();
 };
 
 void lab02_engine_keyboard_callback( GLFWwindow* window, int key, int scancode, int action, int mods );

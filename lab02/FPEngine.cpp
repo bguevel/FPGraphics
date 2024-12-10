@@ -6,7 +6,7 @@
 //*************************************************************************************
 //
 // Helper Functions
-GLfloat gen_rand_GLfloat() { return rand() / (GLfloat)RAND_MAX; }
+GLfloat gen_rand_GLfloat( ) { return rand( ) / (GLfloat)RAND_MAX; }
 
 //*************************************************************************************
 //
@@ -87,7 +87,7 @@ void FPEngine::mSetupShaders( )
     _terrainShaderUniformLocations.trackFilter          = _terrainShaderProgram->getUniformLocation( "trackFilter" );
     _terrainShaderUniformLocations.trackTexture         = _terrainShaderProgram->getUniformLocation( "trackTexture" );
     _terrainShaderUniformLocations.sceneTexture         = _terrainShaderProgram->getUniformLocation( "sceneTexture" );
-    _terrainShaderUniformLocations.eggTexture           = _terrainShaderProgram->getUniformLocation("eggTexture");
+    _terrainShaderUniformLocations.eggTexture           = _terrainShaderProgram->getUniformLocation( "eggTexture" );
     _terrainShaderUniformLocations.maxHeight            = _terrainShaderProgram->getUniformLocation( "maxHeight" );
     _terrainShaderUniformLocations.camPosition          = _terrainShaderProgram->getUniformLocation( "cameraPosition" );
     _terrainShaderUniformLocations.lightColor           = _terrainShaderProgram->getUniformLocation( "light_color" );
@@ -97,7 +97,7 @@ void FPEngine::mSetupShaders( )
     _terrainShaderUniformLocations.spotLightCutoff      = _terrainShaderProgram->getUniformLocation( "spotLightCutoff" );
     _terrainShaderUniformLocations.spotLightOuterCutoff = _terrainShaderProgram->getUniformLocation( "spotLightOuterCutoff" );
     _terrainShaderUniformLocations.texelSize            = _terrainShaderProgram->getUniformLocation( "texelSize" );
-    _terrainShaderUniformLocations.isReverse            = _terrainShaderProgram->getUniformLocation("isReverse");
+    _terrainShaderUniformLocations.isReverse            = _terrainShaderProgram->getUniformLocation( "isReverse" );
     // Terrain Shader Attributes
     _terrainShaderAttributeLocations.vPos      = _terrainShaderProgram->getAttributeLocation( "vPos" );
     _terrainShaderAttributeLocations.vNormal   = _terrainShaderProgram->getAttributeLocation( "vNormal" );
@@ -112,15 +112,10 @@ void FPEngine::mSetupShaders( )
     _skyboxShaderUniformLocations.skyboxTexture    = _skyboxShaderProgram->getUniformLocation( "skyboxTexture" );
 
     // Speed line shader program
-    _speedLineShaderProgram = new CSCI441::ShaderProgram( "shaders/speedLines.v.glsl", "shaders/speedLines.f.glsl" );
+    _speedLineShaderProgram = new CSCI441::ShaderProgram( "shaders/speedLines.v.glsl", "shaders/speedLines.g.glsl", "shaders/speedLines.f.glsl" );
 
     // Get uniform locations
     _speedLineUniformLocations.mvpMatrix     = _speedLineShaderProgram->getUniformLocation( "mvpMatrix" );
-    _speedLineUniformLocations.modelMatrix     = _speedLineShaderProgram->getUniformLocation( "modelMatrix" );
-    _speedLineUniformLocations.cartPosition     = _speedLineShaderProgram->getUniformLocation( "cartPosition" );
-    _speedLineUniformLocations.cartDirection = _speedLineShaderProgram->getUniformLocation( "cartDirection" );
-    _speedLineUniformLocations.materialColor = _speedLineShaderProgram->getUniformLocation( "materialColor" );
-    _speedLineUniformLocations.cartSpeed     = _speedLineShaderProgram->getUniformLocation( "cartSpeed" );
 }
 
 void FPEngine::mSetupBuffers( )
@@ -156,9 +151,9 @@ void FPEngine::mSetupBuffers( )
     {
         exit( EXIT_FAILURE );
     }
-    if ((_easterEggTexture = _loadAndRegisterTexture("rainbowRoadTexture.jpg")) == -1)
+    if ( ( _easterEggTexture = _loadAndRegisterTexture( "rainbowRoadTexture.jpg" ) ) == -1 )
     {
-        exit(EXIT_FAILURE);
+        exit( EXIT_FAILURE );
     }
     if ( ( _sceneTexture = _loadAndRegisterTrackFilter( "grassTexture.jpg" ) ) == -1 )
     {
@@ -172,6 +167,8 @@ void FPEngine::mSetupBuffers( )
     _generateEnvironment( );
 
     _createSkyboxBuffers( );
+
+    _createSpeedLineBuffers( );
 }
 
 void FPEngine::mSetupScene( )
@@ -269,8 +266,8 @@ void FPEngine::mSetupScene( )
     // Set forward direction of carts
     glm::vec3 nextPos   = evaluateBezier( _startT + 0.001f, _p0, _p1, _p2, _p3 );
     glm::vec3 direction = glm::normalize( nextPos - _startPosition );
-    fprintf(stdout, "Player Car Direction, (X: %f)\n", direction.x);
-    _pPlayerCar->setForwardDirection( glm::vec3(1.0f,0.0f,0.0f));
+    fprintf( stdout, "Player Car Direction, (X: %f)\n", direction.x );
+    _pPlayerCar->setForwardDirection( glm::vec3( 1.0f, 0.0f, 0.0f ) );
 
     _cams[CAM_ID::ARC_CAM] = new CSCI441::ArcballCam( );
     _cams[CAM_ID::ARC_CAM]->setLookAtPoint( _pPlayerCar->getPosition( ) );
@@ -289,15 +286,15 @@ void FPEngine::mSetupScene( )
     camID = CAM_ID::FIXED_CAM;
 
     // TODO #6: set lighting uniforms
-    glm::vec3 lightDirection = glm::vec3(-1.0f, -1.0f, -1.0f);
-    glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle(), _lightingShaderUniformLocations.lightColor, 1, glm::value_ptr(lightColor));
-    glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle(), _lightingShaderUniformLocations.lightPosition, 1, glm::value_ptr(lightDirection));
+    glm::vec3 lightDirection = glm::vec3( -1.0f, -1.0f, -1.0f );
+    glm::vec3 lightColor     = glm::vec3( 1.0f, 1.0f, 1.0f );
+    glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.lightColor, 1, glm::value_ptr( lightColor ) );
+    glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.lightPosition, 1, glm::value_ptr( lightDirection ) );
 
     //******************************************************************
-    glm::vec3 playerPosition = _pPlayerCar->getPosition();
-    glm::vec3 spotLightPosition = glm::vec3(-110.0f,30.0f,-110.0f); // Spotlight above the Being
-    glm::vec3 spotLightDirection = glm::vec3(1.0f,0.0f,0.0f);
+    glm::vec3 playerPosition     = _pPlayerCar->getPosition( );
+    glm::vec3 spotLightPosition  = glm::vec3( -110.0f, 30.0f, -110.0f ); // Spotlight above the Being
+    glm::vec3 spotLightDirection = glm::vec3( 1.0f, 0.0f, 0.0f );
     GLfloat spotLightCutoff      = glm::cos( glm::radians( 90.0f ) );
     GLfloat spotLightOuterCutoff = glm::cos( glm::radians( 120.0f ) );
 
@@ -350,75 +347,70 @@ void FPEngine::mSetupScene( )
     printf( "Spotlight Cutoffs: Inner %f, Outer %f\n", spotLightCutoff, spotLightOuterCutoff );
 }
 
-void FPEngine::_generateTrees(const char *FILENAME, GLint GRID_WIDTH, GLint GRID_HEIGHT, GLfloat GRID_SPACING_WIDTH, GLfloat GRID_SPACING_HEIGHT) {
-    //fprintf(stdout, "Entering Generate Trees\n");
+void FPEngine::_generateTrees( const char* FILENAME, GLint GRID_WIDTH, GLint GRID_HEIGHT, GLfloat GRID_SPACING_WIDTH, GLfloat GRID_SPACING_HEIGHT )
+{
 
     // enable setting to prevent image from being upside down
-    stbi_set_flip_vertically_on_load(true);
+    stbi_set_flip_vertically_on_load( true );
 
     // will hold image parameters after load
     GLint imageWidth, imageHeight, imageChannels;
     // load image from file
-    GLubyte *data = stbi_load(FILENAME, &imageWidth, &imageHeight, &imageChannels, 1);
+    GLubyte* data = stbi_load( FILENAME, &imageWidth, &imageHeight, &imageChannels, 1 );
     // if data was read from file
 
-    fprintf(stdout, "Tree File Loaded, Image Width: %d Image Height: %d\n", imageWidth, imageHeight);
+    fprintf( stdout, "Tree File Loaded, Image Width: %d Image Height: %d\n", imageWidth, imageHeight );
 
-    if (!data) {
-        fprintf(stdout, "Error Loading Track Filter for Tree Generations\n");
+    if ( !data )
+    {
+        fprintf( stdout, "Error Loading Track Filter for Tree Generations\n" );
         return;
     }
 
     GLuint _treeFilter[imageWidth][imageHeight];
 
-    for(int i = 0; i < imageHeight*imageWidth; i++){
-        _treeFilter[i%imageWidth][i/imageHeight] = static_cast<GLuint>(data[i]);
+    for ( int i = 0; i < imageHeight * imageWidth; i++ )
+    {
+        _treeFilter[i % imageWidth][i / imageHeight] = static_cast<GLuint>( data[i] );
     }
-    const GLfloat LEFT_END_POINT = -GRID_WIDTH / 2.0f - 5.0f;
-    const GLfloat RIGHT_END_POINT = GRID_WIDTH / 2.0f + 5.0f;
+    const GLfloat LEFT_END_POINT   = -GRID_WIDTH / 2.0f - 5.0f;
+    const GLfloat RIGHT_END_POINT  = GRID_WIDTH / 2.0f + 5.0f;
     const GLfloat BOTTOM_END_POINT = -GRID_HEIGHT / 2.0f - 5.0f;
-    const GLfloat TOP_END_POINT = GRID_HEIGHT / 2.0f + 5.0f;
+    const GLfloat TOP_END_POINT    = GRID_HEIGHT / 2.0f + 5.0f;
 
-    GLfloat gridWidthToTrack = imageWidth / (GRID_WIDTH + 10.0f) ;
-    GLfloat gridHeightToTrack =  imageHeight / (GRID_HEIGHT + 10.0f);
+    GLfloat gridWidthToTrack  = imageWidth / ( GRID_WIDTH + 10.0f );
+    GLfloat gridHeightToTrack = imageHeight / ( GRID_HEIGHT + 10.0f );
 
-    for (int i = LEFT_END_POINT; i <= RIGHT_END_POINT; i+=GRID_SPACING_WIDTH) {
-        for (int j = BOTTOM_END_POINT; j <= TOP_END_POINT; j+=GRID_SPACING_HEIGHT) {
-            if (i % 2 == 0 && j % 2 == 0 && gen_rand_GLfloat() < 0.01f) {
-                if (_treeFilter[(int)((i+RIGHT_END_POINT)*gridWidthToTrack)][(int)((j+TOP_END_POINT)*gridHeightToTrack) ] != 0.0f) {
-                    _trees.push_back(Tree(glm::vec3(i,getTerrainHeight(i,j),j),
-                    _lightingShaderProgram->getShaderProgramHandle(),
-                    _lightingShaderUniformLocations.mvpMatrix,
-                    _lightingShaderAttributeLocations.vNorm,
-                    _lightingShaderUniformLocations.materialDiffuse,
-                    _lightingShaderUniformLocations.materialSpecular,
-                    _lightingShaderUniformLocations.materialShine,
-                    _lightingShaderUniformLocations.isEmitter));
+    for ( int i = LEFT_END_POINT; i <= RIGHT_END_POINT; i += GRID_SPACING_WIDTH )
+    {
+        for ( int j = BOTTOM_END_POINT; j <= TOP_END_POINT; j += GRID_SPACING_HEIGHT )
+        {
+            if ( i % 2 == 0 && j % 2 == 0 && gen_rand_GLfloat( ) < 0.01f )
+            {
+                if ( _treeFilter[(int)( ( i + RIGHT_END_POINT ) * gridWidthToTrack )][(int)( ( j + TOP_END_POINT ) * gridHeightToTrack )] != 0.0f )
+                {
+                    _trees.push_back( Tree( glm::vec3( i, getTerrainHeight( i, j ), j ),
+                                            _lightingShaderProgram->getShaderProgramHandle( ),
+                                            _lightingShaderUniformLocations.mvpMatrix,
+                                            _lightingShaderAttributeLocations.vNorm,
+                                            _lightingShaderUniformLocations.materialDiffuse,
+                                            _lightingShaderUniformLocations.materialSpecular,
+                                            _lightingShaderUniformLocations.materialShine,
+                                            _lightingShaderUniformLocations.isEmitter ) );
                 }
             }
         }
     }
-    stbi_image_free(data);
-    fprintf(stdout, "Tree generation End\n");
-
-    /*
-
-    _trees[0] = new Tree(glm::vec3(0.0f), _lightingShaderProgram->getShaderProgramHandle(),
-                    _lightingShaderUniformLocations.mvpMatrix,
-                    _lightingShaderAttributeLocations.vNorm,
-                    _lightingShaderUniformLocations.materialDiffuse,
-                    _lightingShaderUniformLocations.materialSpecular,
-                    _lightingShaderUniformLocations.materialShine,
-                    _lightingShaderUniformLocations.isEmitter);
-    */
+    stbi_image_free( data );
+    fprintf( stdout, "Tree generation End\n" );
 }
 
-
-
-bool FPEngine::loadHeightMap(const std::string& filepath) {
-    unsigned char* data = stbi_load(filepath.c_str(), &heightMapWidth, &heightMapHeight, &heightMapChannels, 1); // Load as grayscale
-    if (!data) {
-        fprintf(stderr, "Failed to load height map: %s\n", filepath.c_str());
+bool FPEngine::loadHeightMap( const std::string& filepath )
+{
+    unsigned char* data = stbi_load( filepath.c_str( ), &heightMapWidth, &heightMapHeight, &heightMapChannels, 1 ); // Load as grayscale
+    if ( !data )
+    {
+        fprintf( stderr, "Failed to load height map: %s\n", filepath.c_str( ) );
         return false;
     }
 
@@ -591,9 +583,9 @@ void FPEngine::_generateEnvironment( )
     // draws a grid as our ground plane
     // do not edit this next section
 
-    _generateTrees("trackFilter.png", heightMapHeight, heightMapWidth, GRID_SPACING_WIDTH, GRID_SPACING_LENGTH);
+    _generateTrees( "trackFilter.png", heightMapHeight, heightMapWidth, GRID_SPACING_WIDTH, GRID_SPACING_LENGTH );
 
-    _gridColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    _gridColor = glm::vec3( 1.0f, 1.0f, 1.0f );
     //******************************************************************
 }
 
@@ -664,18 +656,18 @@ void FPEngine::_renderScene( glm::mat4 viewMtx, glm::mat4 projMtx ) const
     glBindTexture( GL_TEXTURE_2D, _trackFilter );
     glActiveTexture( GL_TEXTURE0 + TRACK_TEXTURE_SLOT );
     glBindTexture( GL_TEXTURE_2D, _trackTexture );
-    glActiveTexture(GL_TEXTURE0 + EASTER_TEXTURE_SLOT);
-    glBindTexture(GL_TEXTURE_2D, _easterEggTexture);
+    glActiveTexture( GL_TEXTURE0 + EASTER_TEXTURE_SLOT );
+    glBindTexture( GL_TEXTURE_2D, _easterEggTexture );
     glActiveTexture( GL_TEXTURE0 + SCENE_TEXTURE_SLOT );
     glBindTexture( GL_TEXTURE_2D, _sceneTexture );
     _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.heightMap, HEIGHT_MAP_SLOT );
     _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.trackFilter, TRACK_FILTER_SLOT );
     _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.trackTexture, TRACK_TEXTURE_SLOT );
     _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.sceneTexture, SCENE_TEXTURE_SLOT );
-    _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.eggTexture, EASTER_TEXTURE_SLOT);
-    //fprintf(stdout, "isReverse: %d\n", isReverse);
-    //_terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.isReverse, isReverse);
-    glProgramUniform1i(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.isReverse, isReverse);
+    _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.eggTexture, EASTER_TEXTURE_SLOT );
+
+
+    glProgramUniform1i( _terrainShaderProgram->getShaderProgramHandle( ), _terrainShaderUniformLocations.isReverse, isReverse );
     glm::vec2 texelSize( 1.0f / static_cast<float>( heightMapWidth ), 1.0f / static_cast<float>( heightMapHeight ) );
     _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.texelSize, texelSize );
 
@@ -698,8 +690,9 @@ void FPEngine::_renderScene( glm::mat4 viewMtx, glm::mat4 projMtx ) const
     // 2. Draw Car with Lighting Shader
     _lightingShaderProgram->useProgram( );
 
-    for (Tree curTree: _trees) {
-        curTree.draw(viewMtx, projMtx);
+    for ( Tree curTree : _trees )
+    {
+        curTree.draw( viewMtx, projMtx );
     }
 
     // Compute and send matrix uniforms for lighting shader
@@ -713,29 +706,15 @@ void FPEngine::_renderScene( glm::mat4 viewMtx, glm::mat4 projMtx ) const
 
     // Compute transformations for the AI cart
     glm::mat4 modelMtxAICar = glm::mat4( 1.0f );
-    /*
-    // Create a rotation matrix so the cart faces `direction`
-    glm::vec3 up( 0.0f, 1.0f, 0.0f );
-    glm::vec3 right      = glm::normalize( glm::cross( up, _aiCartDirection ) );
-    glm::vec3 adjustedUp = glm::cross( _aiCartDirection, right );
-*/
-    glm::vec3 _aiCartDirection2 = glm::vec3(_aiCartDirection.x, 0, _aiCartDirection.z);
 
-    fprintf(stdout, "AI X: %f Y: %f Z: %f\n", glm::normalize(_aiCartDirection2).x, glm::normalize(_aiCartDirection2).y,glm::normalize(_aiCartDirection2).z);
-    _pAICar->setForwardDirection(glm::normalize(_aiCartDirection2));
-/*
-    glm::mat4 orientation( 1.0f );
-    orientation[0] = glm::vec4( right, 0.0f );
-    orientation[1] = glm::vec4( adjustedUp, 0.0f );
-    orientation[2] = glm::vec4( -_aiCartDirection, 0.0f );
-*/
+    glm::vec3 _aiCartDirection2 = glm::vec3( _aiCartDirection.x, 0, _aiCartDirection.z );
+
+    _pAICar->setForwardDirection( glm::normalize( _aiCartDirection2 ) );
+
     // Combine orientation with the model matrix for drawing
     modelMtxAICar = glm::translate( glm::mat4( 1.0f ), _aiCartPosition ) * glm::scale( glm::mat4( 1.0f ), glm::vec3( 1.0f ) );
 
     _computeAndSendMatrixUniforms( modelMtxAICar, viewMtx, projMtx );
-
-    // Set a distinct color for the AI cart TODO: Identify what color we want the ai cart to be
-    // _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.materialColor, glm::vec3(1.0f, 0.0f, 0.0f));
 
     _pAICar->draw( modelMtxAICar, viewMtx, projMtx );
 
@@ -743,97 +722,41 @@ void FPEngine::_renderScene( glm::mat4 viewMtx, glm::mat4 projMtx ) const
 
     if ( currentPlayerSpeed > _speedThreshold )
     {
-        _speedLineShaderProgram->useProgram( );
+        _speedLineShaderProgram->useProgram();
 
-        // Compute MVP using the same model matrix as for the cart
-        glm::mat4 mvpMtx = projMtx * viewMtx * modelMtxCar;
+        // Update speed line vertices
+        std::vector<glm::vec3> speedLineVertices;
+        int numPoints = 100;
+        float spacing = 0.1f;
+        for (int i = 0; i < numPoints; ++i)
+        {
+            float t = (float)i / (float)(numPoints - 1);
+            // Position the speed lines slightly behind the car based on direction
+            glm::vec3 offset = -normalize(_pPlayerCar->getForwardDirection()) * spacing * (float)i;
+            glm::vec3 point = _pPlayerCar->getPosition() + offset;
+            // Adjust y-coordinate to match terrain height
+            point.y = getTerrainHeight(point.x, point.z) + 0.5f;
+            speedLineVertices.push_back(point);
+        }
 
-        glProgramUniformMatrix4fv(_speedLineShaderProgram->getShaderProgramHandle(),
-                                   _speedLineUniformLocations.modelMatrix, 1, GL_FALSE, glm::value_ptr(modelMtxCar));
+        glBindBuffer(GL_ARRAY_BUFFER, _speedLineVBO);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, speedLineVertices.size() * sizeof(glm::vec3), speedLineVertices.data());
 
-        glProgramUniform3fv(_speedLineShaderProgram->getShaderProgramHandle(),
-                             _speedLineUniformLocations.cartPosition, 1, glm::value_ptr(_pPlayerCar->getPosition()));
+        // Set shader uniforms
+        glm::mat4 modelMtxSpeedLines = glm::mat4(1.0f);
+        glm::mat4 mvpMatrix = projMtx * viewMtx * modelMtxSpeedLines;
+        _speedLineShaderProgram->setProgramUniform("mvpMatrix", mvpMatrix);
 
-        glProgramUniform3fv(_speedLineShaderProgram->getShaderProgramHandle(),
-                             _speedLineUniformLocations.cartDirection, 1, glm::value_ptr(_pPlayerCar->getForwardDirection()));
+        // Enable blending for transparency
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        _speedLineShaderProgram->setProgramUniform( _speedLineUniformLocations.mvpMatrix, mvpMtx );
-        _speedLineShaderProgram->setProgramUniform( _speedLineUniformLocations.cartSpeed, currentPlayerSpeed );
-        _speedLineShaderProgram->setProgramUniform( _speedLineUniformLocations.materialColor, glm::vec3( 1.0f, 0.0f, 0.0f ) );
+        // Draw speed lines as lines, which the geometry shader will convert to quads
+        glBindVertexArray(_speedLineVAO);
+        glDrawArrays(GL_LINES, 0, speedLineVertices.size());
+        glBindVertexArray(0);
 
-        // Enable blending for the speed lines to overlay
-        glEnable( GL_BLEND );
-        glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-
-        // Draw the same geometry for the cart again, but now with speed lines
-        _pPlayerCar->draw( modelMtxCar, viewMtx, projMtx );
-
-        glDisable( GL_BLEND );
-    }
-
-
-    // After drawing the cart normally
-    float currentAISpeed = _aiSpeed;
-
-    if ( currentAISpeed > _speedThresholdAI )
-    {
-        _speedLineShaderProgram->useProgram( );
-
-        // Compute MVP using the same model matrix as for the cart
-        glm::mat4 mvpMtx = projMtx * viewMtx * modelMtxAICar;
-
-        // Set uniforms
-        glProgramUniformMatrix4fv(_speedLineShaderProgram->getShaderProgramHandle(),
-                                   _speedLineUniformLocations.modelMatrix, 1, GL_FALSE, glm::value_ptr(modelMtxAICar));
-
-        glProgramUniform3fv(_speedLineShaderProgram->getShaderProgramHandle(),
-                             _speedLineUniformLocations.cartPosition, 1, glm::value_ptr(_pAICar->getPosition()));
-
-        glProgramUniform3fv(_speedLineShaderProgram->getShaderProgramHandle(),
-                             _speedLineUniformLocations.cartDirection, 1, glm::value_ptr(_pAICar->getForwardDirection()));
-
-        _speedLineShaderProgram->setProgramUniform( _speedLineUniformLocations.mvpMatrix, mvpMtx );
-        _speedLineShaderProgram->setProgramUniform( _speedLineUniformLocations.cartSpeed, currentAISpeed );
-        _speedLineShaderProgram->setProgramUniform( _speedLineUniformLocations.materialColor, glm::vec3( 1.0f, 0.0f, 0.0f ) );
-
-        // Enable blending for the speed lines to overlay
-        glEnable( GL_BLEND );
-        glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-
-        // Draw the same geometry for the cart again, but now with speed lines
-        //_pAICar->draw( modelMtxAICar, viewMtx, projMtx );
-
-        glDisable( GL_BLEND );
-    }
-
-    // TODO: Remove this test code as well
-
-    // Draw the curve line
-    _lightingShaderProgram->useProgram( );
-    glm::mat4 modelMtxCurve = glm::mat4( 1.0f );
-    _computeAndSendMatrixUniforms( modelMtxCurve, viewMtx, projMtx );
-
-    // Set material color for the line (e.g., white)
-    _lightingShaderProgram->setProgramUniform( _lightingShaderUniformLocations.materialDiffuse, glm::vec3( 1.0f, 1.0f, 1.0f ) );
-    _lightingShaderProgram->setProgramUniform( _lightingShaderUniformLocations.materialSpecular, glm::vec3( 0.0f ) );
-    _lightingShaderProgram->setProgramUniform( _lightingShaderUniformLocations.materialShine, 1.0f );
-    _lightingShaderProgram->setProgramUniform( _lightingShaderUniformLocations.isEmitter, 0 );
-
-    glBindVertexArray( _curveVAO );
-    glDrawArrays( GL_LINE_STRIP, 0, _curvePointCount );
-    glBindVertexArray( 0 );
-
-    // Draw control points as small spheres
-    for (auto cPoint : _circleControlPoints)
-    {
-        glm::mat4 modelMtxCP = glm::translate( glm::mat4( 1.0f ), cPoint );
-        // scale down so sphere is small
-        modelMtxCP = glm::scale( modelMtxCP, glm::vec3( 0.1f ) );
-        _computeAndSendMatrixUniforms( modelMtxCP, viewMtx, projMtx );
-
-        // Use a bright color for the control point
-        _lightingShaderProgram->setProgramUniform( _lightingShaderUniformLocations.materialDiffuse, glm::vec3( 1.0f, 0.0f, 0.0f ) );
-        CSCI441::drawSolidSphere( 1.0f, 8, 8 ); // scaled by modelMtxCP above
+        glDisable(GL_BLEND);
     }
 }
 
@@ -845,57 +768,60 @@ void FPEngine::_updateScene( )
     _lastTime          = currentTime;
 
     glm::vec3 playerPos = _pPlayerCar->getPosition( );
-    //fprintf(stdout, "(X: %f, Z: %f)\n", playerPos.x, playerPos.z);
-    //fprintf(stdout, "%d, %d, %d, %d\n", startCheckpoint, firstCheckpoint, secondCheckpoint, thirdCheckpoint );
-    //Check Checkpoints
-    if (!startCheckpoint) {
-        if (abs(playerPos.x) < 5.0f && playerPos.z > 0) {
-            startCheckpoint = true;
+
+    // Check Checkpoints
+    if ( !startCheckpoint )
+    {
+        if ( abs( playerPos.x ) < 5.0f && playerPos.z > 0 )
+        {
+            startCheckpoint      = true;
             checkOrder[numOrder] = 0;
             numOrder++;
-            fprintf(stdout, "start\n");
+            fprintf( stdout, "start\n" );
         }
     }
-    if (!firstCheckpoint) {
-        if (abs(playerPos.z) < 5.0f && playerPos.x > 0) {
-            firstCheckpoint = true;
+    if ( !firstCheckpoint )
+    {
+        if ( abs( playerPos.z ) < 5.0f && playerPos.x > 0 )
+        {
+            firstCheckpoint      = true;
             checkOrder[numOrder] = 1;
             numOrder++;
-            fprintf(stdout, "1st\n");
+            fprintf( stdout, "1st\n" );
         }
     }
-    if (!secondCheckpoint) {
-        if (abs(playerPos.x) < 5.0f && playerPos.z < 0) {
-            secondCheckpoint = true;
+    if ( !secondCheckpoint )
+    {
+        if ( abs( playerPos.x ) < 5.0f && playerPos.z < 0 )
+        {
+            secondCheckpoint     = true;
             checkOrder[numOrder] = 2;
             numOrder++;
-            fprintf(stdout, "2nd\n");
+            fprintf( stdout, "2nd\n" );
         }
     }
-    if (!thirdCheckpoint) {
-        if (abs(playerPos.z) < 5.0f && playerPos.x < 0) {
-            thirdCheckpoint = true;
+    if ( !thirdCheckpoint )
+    {
+        if ( abs( playerPos.z ) < 5.0f && playerPos.x < 0 )
+        {
+            thirdCheckpoint      = true;
             checkOrder[numOrder] = 3;
             numOrder++;
-            fprintf(stdout, "3rd\n");
+            fprintf( stdout, "3rd\n" );
         }
     }
 
-    if (numOrder == 4) {
-        fprintf(stdout, "Checking\n");
-        numOrder = 1;
-        isReverse = 1;
-        firstCheckpoint = false;
+    if ( numOrder == 4 )
+    {
+        fprintf( stdout, "Checking\n" );
+        numOrder         = 1;
+        isReverse        = 1;
+        firstCheckpoint  = false;
         secondCheckpoint = false;
-        thirdCheckpoint = false;
-        if (checkOrder[1] == 1) isReverse = 0;
-        /*
-        for (int i = 1; i < 4; i++) {
-            if (checkOrder[i] == i) isReverse = 0;
-            fprintf(stdout, "%d:%d, ", i, checkOrder[i]);
-        }
-        */
-        fprintf(stdout, "isReverse: %d\n", isReverse);
+        thirdCheckpoint  = false;
+        if ( checkOrder[1] == 1 )
+            isReverse = 0;
+        fprintf( stdout, "isReverse: %d\n", isReverse );
     }
 
     // Retrieve the terrain height at the plane's current X and Z
@@ -925,9 +851,10 @@ void FPEngine::_updateScene( )
     {
         // Increase player speed until max speed
         _playerSpeed += _playerAcceleration * (float)deltaTime;
-        if (_playerSpeed > _playerMaxSpeed) _playerSpeed = _playerMaxSpeed;
+        if ( _playerSpeed > _playerMaxSpeed )
+            _playerSpeed = _playerMaxSpeed;
 
-        _pPlayerCar->moveForward( _playerSpeed);
+        _pPlayerCar->moveForward( _playerSpeed );
         _pPlayerCar->setForwardDirection( );
 
         if ( !( _pPlayerCar->getPosition( ).x + 0.2f < 100.0f && _pPlayerCar->getPosition( ).z + 0.2f < 100.0f && _pPlayerCar->getPosition( ).x + 0.2f > -100.0f &&
@@ -935,14 +862,14 @@ void FPEngine::_updateScene( )
         { // bounds checking, so that we can stay within the created world
             _pPlayerCar->_isFalling = true;
         }
-
     }
     else if ( _keys[GLFW_KEY_S] )
     {
         _playerSpeed += _playerAcceleration * (float)deltaTime;
-        if (_playerSpeed < _playerMaxSpeed) _playerSpeed = _playerMaxSpeed;
+        if ( _playerSpeed < _playerMaxSpeed )
+            _playerSpeed = _playerMaxSpeed;
 
-        _pPlayerCar->moveBackward( _playerSpeed  );
+        _pPlayerCar->moveBackward( _playerSpeed );
         _pPlayerCar->setForwardDirection( );
 
         if ( !( _pPlayerCar->getPosition( ).x + 0.2f < 100.0f && _pPlayerCar->getPosition( ).z + 0.2f < 100.0f && _pPlayerCar->getPosition( ).x + 0.2f > -100.0f &&
@@ -955,13 +882,17 @@ void FPEngine::_updateScene( )
     {
         // If not pressing W, maybe slow down gradually
         _playerSpeed -= _playerAcceleration * (float)deltaTime;
-        if (_playerSpeed < 0.0f) _playerSpeed = 0.0f;
+        if ( _playerSpeed < 0.0f )
+            _playerSpeed = 0.0f;
 
-        if (_playerSpeed > 0.0f) {
-            _pPlayerCar->moveForward(_playerSpeed);
-            _pPlayerCar->setForwardDirection();
-        } else {
-            _pPlayerCar->notMoving();
+        if ( _playerSpeed > 0.0f )
+        {
+            _pPlayerCar->moveForward( _playerSpeed );
+            _pPlayerCar->setForwardDirection( );
+        }
+        else
+        {
+            _pPlayerCar->notMoving( );
         }
     }
     if ( _keys[GLFW_KEY_D] )
@@ -1000,7 +931,8 @@ void FPEngine::_updateScene( )
 
     // Update distance by a delta time
     _aiSpeed += _aiAcceleration * (float)deltaTime;
-    if (_aiSpeed > _aiMaxSpeed) _aiSpeed = _aiMaxSpeed;
+    if ( _aiSpeed > _aiMaxSpeed )
+        _aiSpeed = _aiMaxSpeed;
     _distanceTraveled -= _aiSpeed * (float)deltaTime;
 
     if ( _distanceTraveled < 0.0f )
@@ -1167,8 +1099,8 @@ GLuint FPEngine::_loadAndRegisterSkyboxTexture( const char* FILENAME )
 void FPEngine::_createGroundBuffers( )
 {
     // Define scaling factors
-    float scaleX = 1.0f; // Adjust as needed
-    float scaleZ = 1.0f; // Adjust as needed
+    float scaleX = 1.0f;
+    float scaleZ = 1.0f;
 
     _centerX = ( heightMapWidth - 1 ) * scaleX / 2.0f;
     _centerZ = ( heightMapHeight - 1 ) * scaleZ / 2.0f;
@@ -1213,11 +1145,6 @@ void FPEngine::_createGroundBuffers( )
             float centerQuadX    = ( posX0 + posX1 ) / 2.0f;
             float centerQuadZ    = ( posZ0 + posZ1 ) / 2.0f;
             float distQuadCenter = sqrt( centerQuadX * centerQuadX + centerQuadZ * centerQuadZ );
-
-            // Skip quads within the hole radius
-//            if(distQuadCenter < 90.0){
-//                continue; // Do not generate indices for this quad, creating a hole
-//            }
 
             // Generate indices for the quad
             int topLeft     = z * heightMapWidth + x;
@@ -1532,11 +1459,11 @@ glm::vec3 FPEngine::evaluateBezier( float t, const glm::vec3& p0, const glm::vec
     float uuu = uu * u;
     float ttt = tt * t;
 
-    // Cubic Bezier formula: B(t) = uuu * p0 + 3uu t p1 + 3u tt p2 + ttt p3
-    glm::vec3 point = uuu * p0;  // u^3 * p0
-    point += 3.0f * uu * t * p1; // 3 * u^2 * t * p1
-    point += 3.0f * u * tt * p2; // 3 * u * t^2 * p2
-    point += ttt * p3;           // t^3 * p3
+    // Cubic Bezier formula
+    glm::vec3 point = uuu * p0;
+    point += 3.0f * uu * t * p1;
+    point += 3.0f * u * tt * p2;
+    point += ttt * p3;
 
     return point;
 }
@@ -1546,7 +1473,7 @@ glm::vec3 FPEngine::_convertToWorldCoords( int px, int pz )
     float x = px - _trackCenter.x;
     float z = pz - _trackCenter.z;
     float y = getTerrainHeight( x, z );
-    return glm::vec3( x, y, z );
+    return { x, y, z };
 }
 
 float FPEngine::arcLengthToT( float s, const std::vector<float>& arcLengths, const std::vector<float>& sampleTs )
@@ -1579,6 +1506,23 @@ float FPEngine::arcLengthToT( float s, const std::vector<float>& arcLengths, con
 
     float ratio = ( s - s0 ) / ( s1 - s0 );
     return t0 + ratio * ( t1 - t0 );
+}
+
+void FPEngine::_createSpeedLineBuffers() {
+    glGenVertexArrays(1, &_speedLineVAO);
+    glGenBuffers(1, &_speedLineVBO);
+
+    glBindVertexArray(_speedLineVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, _speedLineVBO);
+
+    // Initialize with empty data; we'll update this each frame
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 3 * 100, NULL, GL_DYNAMIC_DRAW); // 100 points max
+
+    // Position attribute
+    glEnableVertexAttribArray(0); // Assuming location 0
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+    glBindVertexArray(0);
 }
 
 //*************************************************************************************
