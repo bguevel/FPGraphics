@@ -6,6 +6,7 @@
 //*************************************************************************************
 //
 // Helper Functions
+GLfloat gen_rand_GLfloat() { return rand() / (GLfloat)RAND_MAX; }
 
 //*************************************************************************************
 //
@@ -281,17 +282,18 @@ void FPEngine::mSetupScene( )
 
     camID = CAM_ID::FIXED_CAM;
 
-    glm::vec3 lightDirection = glm::vec3( -1.0f, -1.0f, -1.0f );
-    glm::vec3 lightColor     = glm::vec3( 0.2f, 0.2f, 0.2f );
-    glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.lightColor, 1, glm::value_ptr( lightColor ) );
-    glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.lightPosition, 1, glm::value_ptr( lightDirection ) );
+    // TODO #6: set lighting uniforms
+    glm::vec3 lightDirection = glm::vec3(-1.0f, -1.0f, -1.0f);
+    glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle(), _lightingShaderUniformLocations.lightColor, 1, glm::value_ptr(lightColor));
+    glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle(), _lightingShaderUniformLocations.lightPosition, 1, glm::value_ptr(lightDirection));
 
     //******************************************************************
-    glm::vec3 playerPosition     = _pPlayerCar->getPosition( );
-    glm::vec3 spotLightPosition  = glm::vec3( -110.0f, 30.0f, -110.0f ); // Spotlight above the Being
-    glm::vec3 spotLightDirection = glm::vec3( 0.0f, -1.0f, 0.0f );
-    GLfloat spotLightCutoff      = glm::cos( glm::radians( 40.0f ) );
-    GLfloat spotLightOuterCutoff = glm::cos( glm::radians( 70.0f ) );
+    glm::vec3 playerPosition = _pPlayerCar->getPosition();
+    glm::vec3 spotLightPosition = glm::vec3(-110.0f,30.0f,-110.0f); // Spotlight above the Being
+    glm::vec3 spotLightDirection = glm::vec3(1.0f,0.0f,0.0f);
+    GLfloat spotLightCutoff      = glm::cos( glm::radians( 90.0f ) );
+    GLfloat spotLightOuterCutoff = glm::cos( glm::radians( 120.0f ) );
 
     glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.spotLightPosition, 1, glm::value_ptr( spotLightPosition ) );
 
@@ -342,12 +344,75 @@ void FPEngine::mSetupScene( )
     printf( "Spotlight Cutoffs: Inner %f, Outer %f\n", spotLightCutoff, spotLightOuterCutoff );
 }
 
-bool FPEngine::loadHeightMap( const std::string& filepath )
-{
-    unsigned char* data = stbi_load( filepath.c_str( ), &heightMapWidth, &heightMapHeight, &heightMapChannels, 1 ); // Load as grayscale
-    if ( !data )
-    {
-        fprintf( stderr, "Failed to load height map: %s\n", filepath.c_str( ) );
+void FPEngine::_generateTrees(const char *FILENAME, GLint GRID_WIDTH, GLint GRID_HEIGHT, GLfloat GRID_SPACING_WIDTH, GLfloat GRID_SPACING_HEIGHT) {
+    //fprintf(stdout, "Entering Generate Trees\n");
+
+    // enable setting to prevent image from being upside down
+    stbi_set_flip_vertically_on_load(true);
+
+    // will hold image parameters after load
+    GLint imageWidth, imageHeight, imageChannels;
+    // load image from file
+    GLubyte *data = stbi_load(FILENAME, &imageWidth, &imageHeight, &imageChannels, 1);
+    // if data was read from file
+
+    fprintf(stdout, "Tree File Loaded, Image Width: %d Image Height: %d\n", imageWidth, imageHeight);
+
+    if (!data) {
+        fprintf(stdout, "Error Loading Track Filter for Tree Generations\n");
+        return;
+    }
+
+    GLuint _treeFilter[imageWidth][imageHeight];
+
+    for(int i = 0; i < imageHeight*imageWidth; i++){
+        _treeFilter[i%imageWidth][i/imageHeight] = static_cast<GLuint>(data[i]);
+    }
+    const GLfloat LEFT_END_POINT = -GRID_WIDTH / 2.0f - 5.0f;
+    const GLfloat RIGHT_END_POINT = GRID_WIDTH / 2.0f + 5.0f;
+    const GLfloat BOTTOM_END_POINT = -GRID_HEIGHT / 2.0f - 5.0f;
+    const GLfloat TOP_END_POINT = GRID_HEIGHT / 2.0f + 5.0f;
+
+    GLfloat gridWidthToTrack = imageWidth / (GRID_WIDTH + 10.0f) ;
+    GLfloat gridHeightToTrack =  imageHeight / (GRID_HEIGHT + 10.0f);
+
+    for (int i = LEFT_END_POINT; i <= RIGHT_END_POINT; i+=GRID_SPACING_WIDTH) {
+        for (int j = BOTTOM_END_POINT; j <= TOP_END_POINT; j+=GRID_SPACING_HEIGHT) {
+            if (i % 2 == 0 && j % 2 == 0 && gen_rand_GLfloat() < 0.01f) {
+                if (_treeFilter[(int)((i+RIGHT_END_POINT)*gridWidthToTrack)][(int)((j+TOP_END_POINT)*gridHeightToTrack) ] != 0.0f) {
+                    _trees.push_back(Tree(glm::vec3(i,getTerrainHeight(i,j),j),
+                    _lightingShaderProgram->getShaderProgramHandle(),
+                    _lightingShaderUniformLocations.mvpMatrix,
+                    _lightingShaderAttributeLocations.vNorm,
+                    _lightingShaderUniformLocations.materialDiffuse,
+                    _lightingShaderUniformLocations.materialSpecular,
+                    _lightingShaderUniformLocations.materialShine,
+                    _lightingShaderUniformLocations.isEmitter));
+                }
+            }
+        }
+    }
+    stbi_image_free(data);
+    fprintf(stdout, "Tree generation End\n");
+
+    /*
+
+    _trees[0] = new Tree(glm::vec3(0.0f), _lightingShaderProgram->getShaderProgramHandle(),
+                    _lightingShaderUniformLocations.mvpMatrix,
+                    _lightingShaderAttributeLocations.vNorm,
+                    _lightingShaderUniformLocations.materialDiffuse,
+                    _lightingShaderUniformLocations.materialSpecular,
+                    _lightingShaderUniformLocations.materialShine,
+                    _lightingShaderUniformLocations.isEmitter);
+    */
+}
+
+
+
+bool FPEngine::loadHeightMap(const std::string& filepath) {
+    unsigned char* data = stbi_load(filepath.c_str(), &heightMapWidth, &heightMapHeight, &heightMapChannels, 1); // Load as grayscale
+    if (!data) {
+        fprintf(stderr, "Failed to load height map: %s\n", filepath.c_str());
         return false;
     }
 
@@ -520,7 +585,9 @@ void FPEngine::_generateEnvironment( )
     // draws a grid as our ground plane
     // do not edit this next section
 
-    _gridColor = glm::vec3( 1.0f, 1.0f, 1.0f );
+    _generateTrees("trackFilter.png", heightMapHeight, heightMapWidth, GRID_SPACING_WIDTH, GRID_SPACING_LENGTH);
+
+    _gridColor = glm::vec3(1.0f, 1.0f, 1.0f);
     //******************************************************************
 }
 
@@ -658,6 +725,10 @@ void FPEngine::_renderScene( glm::mat4 viewMtx, glm::mat4 projMtx ) const
         _pPlayerCar->draw( modelMtxCar, viewMtx, projMtx );
 
         glDisable( GL_BLEND );
+    }
+
+    for (Tree curTree: _trees) {
+        curTree.draw(viewMtx, projMtx);
     }
 
     // Compute transformations for the AI cart
@@ -1074,10 +1145,9 @@ void FPEngine::_createGroundBuffers( )
             float distQuadCenter = sqrt( centerQuadX * centerQuadX + centerQuadZ * centerQuadZ );
 
             // Skip quads within the hole radius
-            if ( distQuadCenter < 90.0 )
-            {
-                continue; // Do not generate indices for this quad, creating a hole
-            }
+//            if(distQuadCenter < 90.0){
+//                continue; // Do not generate indices for this quad, creating a hole
+//            }
 
             // Generate indices for the quad
             int topLeft     = z * heightMapWidth + x;
