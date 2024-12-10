@@ -1,8 +1,10 @@
 #include "FPEngine.h"
-
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 //*************************************************************************************
 //
 // Helper Functions
+GLfloat gen_rand_GLfloat() { return rand() / (GLfloat)RAND_MAX; }
 
 //*************************************************************************************
 //
@@ -43,7 +45,7 @@ void FPEngine::mSetupOpenGL() {
 }
 
 void FPEngine::mSetupShaders() {
-    _lightingShaderProgram = new CSCI441::ShaderProgram("shaders/lab05.v.glsl", "shaders/lab05.f.glsl" );
+    _lightingShaderProgram = new CSCI441::ShaderProgram("shaders/fp.v.glsl", "shaders/fp.f.glsl" );
     _lightingShaderUniformLocations.mvpMatrix      = _lightingShaderProgram->getUniformLocation("mvpMatrix");
     _lightingShaderUniformLocations.materialDiffuse = _lightingShaderProgram->getUniformLocation("materialDiffuse");
     _lightingShaderUniformLocations.materialSpecular = _lightingShaderProgram->getUniformLocation("materialSpecular");
@@ -166,7 +168,7 @@ void FPEngine::mSetupScene() {
 
     // TODO #6: set lighting uniforms
     glm::vec3 lightDirection = glm::vec3(-1.0f, -1.0f, -1.0f);
-    glm::vec3 lightColor = glm::vec3(0.2f, 0.2f, 0.2f);
+    glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
     glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle(), _lightingShaderUniformLocations.lightColor, 1, glm::value_ptr(lightColor));
     glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle(), _lightingShaderUniformLocations.lightPosition, 1, glm::value_ptr(lightDirection));
 
@@ -224,6 +226,71 @@ void FPEngine::mSetupScene() {
     printf("Spotlight Cutoffs: Inner %f, Outer %f\n", spotLightCutoff, spotLightOuterCutoff);
 
 }
+
+void FPEngine::_generateTrees(const char *FILENAME, GLint GRID_WIDTH, GLint GRID_HEIGHT, GLfloat GRID_SPACING_WIDTH, GLfloat GRID_SPACING_HEIGHT) {
+    //fprintf(stdout, "Entering Generate Trees\n");
+
+    // enable setting to prevent image from being upside down
+    stbi_set_flip_vertically_on_load(true);
+
+    // will hold image parameters after load
+    GLint imageWidth, imageHeight, imageChannels;
+    // load image from file
+    GLubyte *data = stbi_load(FILENAME, &imageWidth, &imageHeight, &imageChannels, 1);
+    // if data was read from file
+
+    fprintf(stdout, "Tree File Loaded, Image Width: %d Image Height: %d\n", imageWidth, imageHeight);
+
+    if (!data) {
+        fprintf(stdout, "Error Loading Track Filter for Tree Generations\n");
+        return;
+    }
+
+    GLuint _treeFilter[imageWidth][imageHeight];
+
+    for(int i = 0; i < imageHeight*imageWidth; i++){
+        _treeFilter[i%imageWidth][i/imageHeight] = static_cast<GLuint>(data[i]);
+    }
+    const GLfloat LEFT_END_POINT = -GRID_WIDTH / 2.0f - 5.0f;
+    const GLfloat RIGHT_END_POINT = GRID_WIDTH / 2.0f + 5.0f;
+    const GLfloat BOTTOM_END_POINT = -GRID_HEIGHT / 2.0f - 5.0f;
+    const GLfloat TOP_END_POINT = GRID_HEIGHT / 2.0f + 5.0f;
+
+    GLfloat gridWidthToTrack = imageWidth / (GRID_WIDTH + 10.0f) ;
+    GLfloat gridHeightToTrack =  imageHeight / (GRID_HEIGHT + 10.0f);
+
+    for (int i = LEFT_END_POINT; i <= RIGHT_END_POINT; i+=GRID_SPACING_WIDTH) {
+        for (int j = BOTTOM_END_POINT; j <= TOP_END_POINT; j+=GRID_SPACING_HEIGHT) {
+            if (i % 2 == 0 && j % 2 == 0 && gen_rand_GLfloat() < 0.01f) {
+                if (_treeFilter[(int)((i+RIGHT_END_POINT)*gridWidthToTrack)][(int)((j+TOP_END_POINT)*gridHeightToTrack) ] != 0.0f) {
+                    _trees.push_back(Tree(glm::vec3(i,getTerrainHeight(i,j),j),
+                    _lightingShaderProgram->getShaderProgramHandle(),
+                    _lightingShaderUniformLocations.mvpMatrix,
+                    _lightingShaderAttributeLocations.vNorm,
+                    _lightingShaderUniformLocations.materialDiffuse,
+                    _lightingShaderUniformLocations.materialSpecular,
+                    _lightingShaderUniformLocations.materialShine,
+                    _lightingShaderUniformLocations.isEmitter));
+                }
+            }
+        }
+    }
+    stbi_image_free(data);
+    fprintf(stdout, "Tree generation End\n");
+
+    /*
+
+    _trees[0] = new Tree(glm::vec3(0.0f), _lightingShaderProgram->getShaderProgramHandle(),
+                    _lightingShaderUniformLocations.mvpMatrix,
+                    _lightingShaderAttributeLocations.vNorm,
+                    _lightingShaderUniformLocations.materialDiffuse,
+                    _lightingShaderUniformLocations.materialSpecular,
+                    _lightingShaderUniformLocations.materialShine,
+                    _lightingShaderUniformLocations.isEmitter);
+    */
+}
+
+
 
 bool FPEngine::loadHeightMap(const std::string& filepath) {
     unsigned char* data = stbi_load(filepath.c_str(), &heightMapWidth, &heightMapHeight, &heightMapChannels, 1); // Load as grayscale
@@ -387,6 +454,8 @@ void FPEngine::_generateEnvironment() {
     // draws a grid as our ground plane
     // do not edit this next section
 
+    _generateTrees("trackFilter.png", heightMapHeight, heightMapWidth, GRID_SPACING_WIDTH, GRID_SPACING_LENGTH);
+
     _gridColor = glm::vec3(1.0f, 1.0f, 1.0f);
     //******************************************************************
 }
@@ -488,13 +557,16 @@ void FPEngine::_renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) const {
 
     // Compute and send matrix uniforms for lighting shader
     glm::mat4 modelMtxPlane = glm::mat4(1.0f);
-    glm::vec3 playerPos = _pPlayerCar->getPosition();
 
     modelMtxPlane = glm::translate(modelMtxPlane, _pPlayerCar->getPosition());
     _computeAndSendMatrixUniforms(modelMtxPlane, viewMtx, projMtx);
 
     // Draw the plane
     _pPlayerCar->draw(modelMtxPlane, viewMtx, projMtx);
+
+    for (Tree curTree: _trees) {
+        curTree.draw(viewMtx, projMtx);
+    }
 
     // Compute transformations for the AI cart
     glm::mat4 modelMtxCart = glm::mat4(1.0f);
@@ -555,6 +627,8 @@ void FPEngine::_renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) const {
 void FPEngine::_updateScene(){
 
     glm::vec3 playerPos = _pPlayerCar->getPosition();
+
+    //fprintf(stdout, "Player Position X: %f, Z: %f\n", playerPos.x, playerPos.z);
 
     // Retrieve the terrain height at the plane's current X and Z
     float terrainHeightPlayer = getTerrainHeight(playerPos.x, playerPos.z);

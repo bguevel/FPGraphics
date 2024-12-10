@@ -8,6 +8,7 @@
 #include <CSCI441/ShaderProgram.hpp>
 #include <glm/glm.hpp>
 #include <vector>
+#include "Tree.h"
 
 #include <CSCI441/ArcballCam.hpp>
 #include <CSCI441/SimpleShader.hpp>
@@ -18,8 +19,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+
 
 #ifndef M_PI
     #define M_PI 3.14159265f
@@ -102,6 +102,7 @@ class FPEngine final : public CSCI441::OpenGLEngine
         [[nodiscard]] float getTerrainHeight( float x, float z ) const;
         static GLuint _loadAndRegisterSkyboxTexture( const char* FILENAME );
         void _createSkyboxBuffers( );
+        void _generateTrees(const char *FILENAME, GLint GRID_WIDTH, GLint GRID_HEIGHT, GLfloat GRID_SPACING_WIDTH, GLfloat GRID_SPACING_HEIGHT);
 
     private:
         GLuint _skyTex{};
@@ -226,6 +227,9 @@ class FPEngine final : public CSCI441::OpenGLEngine
                 GLint cartSpeed;
                 GLint materialColor;
         } _speedLineUniformLocations{};
+
+        //Trees
+        std::vector<Tree> _trees;
 
         CSCI441::ShaderProgram* _speedLineShaderProgram = nullptr;
 
