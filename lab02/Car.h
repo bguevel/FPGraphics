@@ -43,6 +43,7 @@ class Car
     void setPosition( glm::vec3 position );
     glm::vec3 getForwardDirection( );
     void setForwardDirection( );
+    void setForwardDirection(const glm::vec3& direction);
     void moveForward( GLfloat movementFactor );
     void moveBackward( GLfloat movementFactor );
     void notMoving();

@@ -1,5 +1,8 @@
 #include "FPEngine.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 //*************************************************************************************
 //
 // Helper Functions
@@ -8,88 +11,94 @@
 //
 // Engine Setup
 
-FPEngine::FPEngine()
-      : CSCI441::OpenGLEngine(4, 1, 640, 640, "FP - The Grey Havens") {
-    _gridColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    _mousePosition = glm::vec2(MOUSE_UNINITIALIZED, MOUSE_UNINITIALIZED );
+FPEngine::FPEngine( )
+    : CSCI441::OpenGLEngine( 4, 1, 640, 640, "FP - The Grey Havens" )
+{
+    _gridColor            = glm::vec3( 1.0f, 1.0f, 1.0f );
+    _mousePosition        = glm::vec2( MOUSE_UNINITIALIZED, MOUSE_UNINITIALIZED );
     _leftMouseButtonState = GLFW_RELEASE;
-    for(auto& _key : _keys) _key = GL_FALSE;
+    for ( auto& _key : _keys )
+        _key = GL_FALSE;
     _cams = new CSCI441::Camera*[numCams];
 }
 
-FPEngine::~FPEngine() {
-    for (int i = 0; i < numCams; ++i) {
+FPEngine::~FPEngine( )
+{
+    for ( int i = 0; i < numCams; ++i )
+    {
         delete _cams[i];
     }
     delete[] _cams;
 }
 
-void FPEngine::mSetupGLFW() {
-    CSCI441::OpenGLEngine::mSetupGLFW();                                // set up our OpenGL context
+void FPEngine::mSetupGLFW( )
+{
+    CSCI441::OpenGLEngine::mSetupGLFW( ); // set up our OpenGL context
 
     glfwSetKeyCallback( mpWindow, lab02_engine_keyboard_callback );             // set our keyboard callback function
     glfwSetCursorPosCallback( mpWindow, lab02_engine_cursor_callback );         // set our cursor position callback function
     glfwSetMouseButtonCallback( mpWindow, lab02_engine_mouse_button_callback ); // set our mouse button callback function
 }
 
-void FPEngine::mSetupOpenGL() {
-    glEnable( GL_DEPTH_TEST );					                        // enable depth testing
-    glDepthFunc( GL_LESS );							                // use less than depth test
+void FPEngine::mSetupOpenGL( )
+{
+    glEnable( GL_DEPTH_TEST ); // enable depth testing
+    glDepthFunc( GL_LESS );    // use less than depth test
 
-    glEnable(GL_BLEND);									            // enable blending
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	    // use one minus blending equation
+    glEnable( GL_BLEND );                                // enable blending
+    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA ); // use one minus blending equation
 
-    glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );	        // clear the frame buffer to black
+    glClearColor( 0.0f, 0.0f, 0.0f, 1.0f ); // clear the frame buffer to black
 }
 
-void FPEngine::mSetupShaders() {
-    _lightingShaderProgram = new CSCI441::ShaderProgram("shaders/lab05.v.glsl", "shaders/lab05.f.glsl" );
-    _lightingShaderUniformLocations.mvpMatrix      = _lightingShaderProgram->getUniformLocation("mvpMatrix");
-    _lightingShaderUniformLocations.materialDiffuse = _lightingShaderProgram->getUniformLocation("materialDiffuse");
-    _lightingShaderUniformLocations.materialSpecular = _lightingShaderProgram->getUniformLocation("materialSpecular");
-    _lightingShaderUniformLocations.materialShine = _lightingShaderProgram->getUniformLocation("materialShine");
-    _lightingShaderUniformLocations.isEmitter = _lightingShaderProgram->getUniformLocation("isEmitter");
-    // TODO #3A: assign uniforms
-    _lightingShaderUniformLocations.lightColor = _lightingShaderProgram->getUniformLocation("light_color");
-    _lightingShaderUniformLocations.lightPosition = _lightingShaderProgram->getUniformLocation("light_direction");
-    _lightingShaderAttributeLocations.vPos         = _lightingShaderProgram->getAttributeLocation("vPos");
-    _lightingShaderUniformLocations.vNormalMatrix = _lightingShaderProgram->getUniformLocation("mtxNormal");
+void FPEngine::mSetupShaders( )
+{
+    _lightingShaderProgram                           = new CSCI441::ShaderProgram( "shaders/fp.v.glsl", "shaders/fp.f.glsl" );
+    _lightingShaderUniformLocations.mvpMatrix        = _lightingShaderProgram->getUniformLocation( "mvpMatrix" );
+    _lightingShaderUniformLocations.materialDiffuse  = _lightingShaderProgram->getUniformLocation( "materialDiffuse" );
+    _lightingShaderUniformLocations.materialSpecular = _lightingShaderProgram->getUniformLocation( "materialSpecular" );
+    _lightingShaderUniformLocations.materialShine    = _lightingShaderProgram->getUniformLocation( "materialShine" );
+    _lightingShaderUniformLocations.isEmitter        = _lightingShaderProgram->getUniformLocation( "isEmitter" );
 
-    _lightingShaderUniformLocations.modelMatrix    = _lightingShaderProgram->getUniformLocation( "modelMatrix" );
-    _lightingShaderUniformLocations.camPosition = _lightingShaderProgram->getUniformLocation("cameraPosition");
+    _lightingShaderUniformLocations.lightColor    = _lightingShaderProgram->getUniformLocation( "light_color" );
+    _lightingShaderUniformLocations.lightPosition = _lightingShaderProgram->getUniformLocation( "light_direction" );
+    _lightingShaderAttributeLocations.vPos        = _lightingShaderProgram->getAttributeLocation( "vPos" );
+    _lightingShaderUniformLocations.vNormalMatrix = _lightingShaderProgram->getUniformLocation( "mtxNormal" );
+
+    _lightingShaderUniformLocations.modelMatrix = _lightingShaderProgram->getUniformLocation( "modelMatrix" );
+    _lightingShaderUniformLocations.camPosition = _lightingShaderProgram->getUniformLocation( "cameraPosition" );
 
     _lightingShaderUniformLocations.spotLightCutoff      = _lightingShaderProgram->getUniformLocation( "spotLightCutoff" );
     _lightingShaderUniformLocations.spotLightDirection   = _lightingShaderProgram->getUniformLocation( "spotLightDirection" );
     _lightingShaderUniformLocations.spotLightPosition    = _lightingShaderProgram->getUniformLocation( "spotLightPosition" );
     _lightingShaderUniformLocations.spotLightOuterCutoff = _lightingShaderProgram->getUniformLocation( "spotLightOuterCutoff" );
 
-    _lightingShaderAttributeLocations.vNorm = _lightingShaderProgram->getAttributeLocation("vertexnorm");
-    CSCI441::setVertexAttributeLocations(_lightingShaderAttributeLocations.vPos,_lightingShaderAttributeLocations.vNorm);
+    _lightingShaderAttributeLocations.vNorm = _lightingShaderProgram->getAttributeLocation( "vertexnorm" );
+    CSCI441::setVertexAttributeLocations( _lightingShaderAttributeLocations.vPos, _lightingShaderAttributeLocations.vNorm );
 
-    _terrainShaderProgram = new CSCI441::ShaderProgram("shaders/height.v.glsl", "shaders/height.f.glsl");
+    _terrainShaderProgram = new CSCI441::ShaderProgram( "shaders/height.v.glsl", "shaders/height.f.glsl" );
 
     // Get uniform locations for terrain shader
-    _terrainShaderUniformLocations.mvpMatrix           = _terrainShaderProgram->getUniformLocation("mvpMatrix");
-    _terrainShaderUniformLocations.modelMatrix         = _terrainShaderProgram->getUniformLocation("modelMatrix");
-    _terrainShaderUniformLocations.normalMatrix        = _terrainShaderProgram->getUniformLocation("normalMatrix");
-    _terrainShaderUniformLocations.heightMap           = _terrainShaderProgram->getUniformLocation("heightMap");
-    _terrainShaderUniformLocations.trackFilter         = _terrainShaderProgram->getUniformLocation("trackFilter");
-    _terrainShaderUniformLocations.trackTexture        = _terrainShaderProgram->getUniformLocation("trackTexture");
-    _terrainShaderUniformLocations.sceneTexture        = _terrainShaderProgram->getUniformLocation("sceneTexture");
-    _terrainShaderUniformLocations.maxHeight           = _terrainShaderProgram->getUniformLocation("maxHeight");
-    _terrainShaderUniformLocations.materialColor       = _terrainShaderProgram->getUniformLocation("materialColor");
-    _terrainShaderUniformLocations.camPosition         = _terrainShaderProgram->getUniformLocation("cameraPosition");
-    _terrainShaderUniformLocations.lightColor          = _terrainShaderProgram->getUniformLocation("light_color");
-    _terrainShaderUniformLocations.lightPosition       = _terrainShaderProgram->getUniformLocation("light_direction");
-    _terrainShaderUniformLocations.spotLightPosition   = _terrainShaderProgram->getUniformLocation("spotLightPosition");
-    _terrainShaderUniformLocations.spotLightDirection  = _terrainShaderProgram->getUniformLocation("spotLightDirection");
-    _terrainShaderUniformLocations.spotLightCutoff     = _terrainShaderProgram->getUniformLocation("spotLightCutoff");
-    _terrainShaderUniformLocations.spotLightOuterCutoff= _terrainShaderProgram->getUniformLocation("spotLightOuterCutoff");
-    _terrainShaderUniformLocations.texelSize = _terrainShaderProgram->getUniformLocation("texelSize");
+    _terrainShaderUniformLocations.mvpMatrix            = _terrainShaderProgram->getUniformLocation( "mvpMatrix" );
+    _terrainShaderUniformLocations.modelMatrix          = _terrainShaderProgram->getUniformLocation( "modelMatrix" );
+    _terrainShaderUniformLocations.normalMatrix         = _terrainShaderProgram->getUniformLocation( "normalMatrix" );
+    _terrainShaderUniformLocations.heightMap            = _terrainShaderProgram->getUniformLocation( "heightMap" );
+    _terrainShaderUniformLocations.trackFilter          = _terrainShaderProgram->getUniformLocation( "trackFilter" );
+    _terrainShaderUniformLocations.trackTexture         = _terrainShaderProgram->getUniformLocation( "trackTexture" );
+    _terrainShaderUniformLocations.sceneTexture         = _terrainShaderProgram->getUniformLocation( "sceneTexture" );
+    _terrainShaderUniformLocations.maxHeight            = _terrainShaderProgram->getUniformLocation( "maxHeight" );
+    _terrainShaderUniformLocations.camPosition          = _terrainShaderProgram->getUniformLocation( "cameraPosition" );
+    _terrainShaderUniformLocations.lightColor           = _terrainShaderProgram->getUniformLocation( "light_color" );
+    _terrainShaderUniformLocations.lightPosition        = _terrainShaderProgram->getUniformLocation( "light_direction" );
+    _terrainShaderUniformLocations.spotLightPosition    = _terrainShaderProgram->getUniformLocation( "spotLightPosition" );
+    _terrainShaderUniformLocations.spotLightDirection   = _terrainShaderProgram->getUniformLocation( "spotLightDirection" );
+    _terrainShaderUniformLocations.spotLightCutoff      = _terrainShaderProgram->getUniformLocation( "spotLightCutoff" );
+    _terrainShaderUniformLocations.spotLightOuterCutoff = _terrainShaderProgram->getUniformLocation( "spotLightOuterCutoff" );
+    _terrainShaderUniformLocations.texelSize            = _terrainShaderProgram->getUniformLocation( "texelSize" );
     // Terrain Shader Attributes
-    _terrainShaderAttributeLocations.vPos      = _terrainShaderProgram->getAttributeLocation("vPos");
-    _terrainShaderAttributeLocations.vNormal   = _terrainShaderProgram->getAttributeLocation("vNormal");
-    _terrainShaderAttributeLocations.vTexCoord = _terrainShaderProgram->getAttributeLocation("vTexCoord");
+    _terrainShaderAttributeLocations.vPos      = _terrainShaderProgram->getAttributeLocation( "vPos" );
+    _terrainShaderAttributeLocations.vNormal   = _terrainShaderProgram->getAttributeLocation( "vNormal" );
+    _terrainShaderAttributeLocations.vTexCoord = _terrainShaderProgram->getAttributeLocation( "vTexCoord" );
 
     _skyboxShaderProgram = new CSCI441::ShaderProgram( "shaders/skybox.v.glsl", "shaders/skybox.f.glsl" );
 
@@ -100,80 +109,187 @@ void FPEngine::mSetupShaders() {
     _skyboxShaderUniformLocations.skyboxTexture    = _skyboxShaderProgram->getUniformLocation( "skyboxTexture" );
 
     // Speed line shader program
-    _speedLineShaderProgram = new CSCI441::ShaderProgram("shaders/speedLines.v.glsl", "shaders/speedLines.f.glsl");
+    _speedLineShaderProgram = new CSCI441::ShaderProgram( "shaders/speedLines.v.glsl", "shaders/speedLines.f.glsl" );
 
     // Get uniform locations
-    _speedLineUniformLocations.mvpMatrix = _speedLineShaderProgram->getUniformLocation("mvpMatrix");
-    _speedLineUniformLocations.cartSpeed = _speedLineShaderProgram->getUniformLocation("cartSpeed");
-    _speedLineUniformLocations.materialColor = _speedLineShaderProgram->getUniformLocation("materialColor");
+    _speedLineUniformLocations.mvpMatrix     = _speedLineShaderProgram->getUniformLocation( "mvpMatrix" );
+    _speedLineUniformLocations.modelMatrix     = _speedLineShaderProgram->getUniformLocation( "modelMatrix" );
+    _speedLineUniformLocations.cartPosition     = _speedLineShaderProgram->getUniformLocation( "cartPosition" );
+    _speedLineUniformLocations.cartDirection = _speedLineShaderProgram->getUniformLocation( "cartDirection" );
+    _speedLineUniformLocations.materialColor = _speedLineShaderProgram->getUniformLocation( "materialColor" );
+    _speedLineUniformLocations.cartSpeed     = _speedLineShaderProgram->getUniformLocation( "cartSpeed" );
 }
 
-void FPEngine::mSetupBuffers() {
+void FPEngine::mSetupBuffers( )
+{
     maxHeight = 10.0f;
-    // Initialize the plane (assuming this is part of your scene)
 
-    _pPlayerCar = new Car(_lightingShaderProgram->getShaderProgramHandle(),
-                        _lightingShaderUniformLocations.mvpMatrix,
-                        _lightingShaderAttributeLocations.vNorm,
-                        _lightingShaderUniformLocations.materialDiffuse,
-                        _lightingShaderUniformLocations.materialSpecular,
-                        _lightingShaderUniformLocations.materialShine,
-                        _lightingShaderUniformLocations.isEmitter);
+    _pPlayerCar = new Car( _lightingShaderProgram->getShaderProgramHandle( ),
+                           _lightingShaderUniformLocations.mvpMatrix,
+                           _lightingShaderAttributeLocations.vNorm,
+                           _lightingShaderUniformLocations.materialDiffuse,
+                           _lightingShaderUniformLocations.materialSpecular,
+                           _lightingShaderUniformLocations.materialShine,
+                           _lightingShaderUniformLocations.isEmitter );
+
+    _pAICar = new Car( _lightingShaderProgram->getShaderProgramHandle( ),
+                       _lightingShaderUniformLocations.mvpMatrix,
+                       _lightingShaderAttributeLocations.vNorm,
+                       _lightingShaderUniformLocations.materialDiffuse,
+                       _lightingShaderUniformLocations.materialSpecular,
+                       _lightingShaderUniformLocations.materialShine,
+                       _lightingShaderUniformLocations.isEmitter );
+
     // Load the height map first
-    if(!loadHeightMap("heightmap.png")) { // Ensure "heightmap.png" is in the correct directory
-        exit(EXIT_FAILURE);
+    if ( !loadHeightMap( "heightmap.png" ) )
+    { // Ensure "heightmap.png" is in the correct directory
+        exit( EXIT_FAILURE );
     }
-    if ((_trackFilter = _loadAndRegisterTrackFilter("trackFilter.png")) == -1) {
-        exit(EXIT_FAILURE);
+    if ( ( _trackFilter = _loadAndRegisterTrackFilter( "trackFilter.png" ) ) == -1 )
+    {
+        exit( EXIT_FAILURE );
     }
-    if ((_trackTexture = _loadAndRegisterTexture("roadTexture.jpg")) == -1) {
-        exit(EXIT_FAILURE);
+    if ( ( _trackTexture = _loadAndRegisterTexture( "roadTexture.jpg" ) ) == -1 )
+    {
+        exit( EXIT_FAILURE );
     }
-    if ((_sceneTexture = _loadAndRegisterTrackFilter("grassTexture.jpg")) == -1) {
-        exit(EXIT_FAILURE);
+    if ( ( _sceneTexture = _loadAndRegisterTrackFilter( "grassTexture.jpg" ) ) == -1 )
+    {
+        exit( EXIT_FAILURE );
     }
     _skyTex = _loadAndRegisterSkyboxTexture( "cubeMapFrozen.jpg" );
     // Now create the ground buffers using the loaded height map data
-    _createGroundBuffers();
+    _createGroundBuffers( );
 
     // Generate other environment elements
-    _generateEnvironment();
+    _generateEnvironment( );
 
     _createSkyboxBuffers( );
 }
 
-void FPEngine::mSetupScene() {
-    //_pFreeCam = new FreeCam();
-    _cameraSpeed = glm::vec2(0.25f, 0.02f);
+void FPEngine::mSetupScene( )
+{
+    _cameraSpeed = glm::vec2( 0.25f, 0.02f );
 
-    _aiCartPosition = evaluateBezier(_bezierT, _p0, _p1, _p2, _p3);
+    // Calculate bezier curve points
+    int xc = ( 112 + 558 ) / 2;
+    int zc = ( 85 + 577 ) / 2;
 
-    _cams[CAM_ID::ARC_CAM] = new CSCI441::ArcballCam();
-    _cams[CAM_ID::ARC_CAM]->setLookAtPoint(_pPlayerCar->getPosition());
-    _cams[CAM_ID::ARC_CAM]->setRadius(15);
-    _cams[CAM_ID::ARC_CAM]->setTheta(-M_PI / 3.0f );
-    _cams[CAM_ID::ARC_CAM]->setPhi(8*M_PI/6);
-    _cams[CAM_ID::ARC_CAM]->recomputeOrientation();
+    int xr = ( 558 - 112 ) / 5;
+    int zr = ( 577 - 85 ) / 5;
 
-    _cams[CAM_ID::FIXED_CAM] = new CSCI441::ArcballCam();
-    _cams[CAM_ID::FIXED_CAM]->setLookAtPoint(_pPlayerCar->getPosition());
-    _cams[CAM_ID::FIXED_CAM]->setRadius(15);
-    _cams[CAM_ID::FIXED_CAM]->setTheta(M_PI/2);
-    _cams[CAM_ID::FIXED_CAM]->setPhi(8*M_PI/6);
-    _cams[CAM_ID::FIXED_CAM]->recomputeOrientation();
+    float scaleFactor = 1.2f;
+
+    // Curve 1
+    _p0 = _convertToWorldCoords( xc, zc + zr );
+    _p1 = _convertToWorldCoords( (int)( xc - k * xr ), zc + zr );
+    _p1 = _p0 + ( _p1 - _p0 ) * ( scaleFactor + 0.2f );
+    _p2 = _convertToWorldCoords( xc - xr, (int)( zc + k * zr ) );
+    _p2 = _p0 + ( _p2 - _p0 ) * ( scaleFactor );
+    _p3 = _convertToWorldCoords( xc - xr, zc );
+    _p3 = _p0 + ( _p3 - _p0 ) * ( scaleFactor );
+
+    // Curve 2
+    _p4 = _convertToWorldCoords( xc - xr, (int)( zc - k * zr ) );
+    _p4 = _p0 + ( _p4 - _p0 ) * scaleFactor;
+    _p5 = _convertToWorldCoords( (int)( xc - k * xr ), zc - zr );
+    _p5 = _p0 + ( _p5 - _p0 ) * scaleFactor;
+    _p6 = _convertToWorldCoords( xc, zc - zr );
+    _p6 = _p0 + ( _p6 - _p0 ) * scaleFactor;
+
+    // Curve 3
+    _p7 = _convertToWorldCoords( (int)( xc + k * xr ), zc - zr );
+    _p7 = _p0 + ( _p7 - _p0 ) * scaleFactor;
+    _p8 = _convertToWorldCoords( xc + xr, (int)( zc - k * zr ) );
+    _p8 = _p0 + ( _p8 - _p0 ) * scaleFactor;
+    _p9 = _convertToWorldCoords( xc + xr, zc );
+    _p9 = _p0 + ( _p9 - _p0 ) * ( scaleFactor + 0.4f );
+
+    // Curve 4
+    _p10 = _convertToWorldCoords( xc + xr, (int)( zc + k * zr ) );
+    _p10 = _p0 + ( _p10 - _p0 ) * ( scaleFactor + 0.6f );
+    _p11 = _convertToWorldCoords( (int)( xc + k * xr ), zc + zr );
+    _p11 = _p0 + ( _p11 - _p0 ) * ( scaleFactor + 0.6f );
+    _p12 = _p0;
+
+    _circleControlPoints = { _p0, _p1, _p2, _p3, _p4, _p5, _p6, _p7, _p8, _p9, _p10, _p11, _p12 };
+
+    // TODO: Remove this test code before turning in!
+    std::vector<glm::vec3> curvePoints;
+    int resolution = 100; // number of samples per curve
+    for ( int curveIndex = 0; curveIndex < numCurves; ++curveIndex )
+    {
+        // get the appropriate control points for this curve segment:
+        glm::vec3 c0 = _circleControlPoints[curveIndex * 3 + 0];
+        glm::vec3 c1 = _circleControlPoints[curveIndex * 3 + 1];
+        glm::vec3 c2 = _circleControlPoints[curveIndex * 3 + 2];
+        glm::vec3 c3 = _circleControlPoints[curveIndex * 3 + 3];
+
+        for ( int i = 0; i <= resolution; ++i )
+        {
+            float t      = (float)i / (float)resolution;
+            glm::vec3 pt = evaluateBezier( t, c0, c1, c2, c3 );
+            pt.y += 10;
+            curvePoints.push_back( pt );
+        }
+    }
+
+    // Now create a VAO/VBO for these points
+    glGenVertexArrays( 1, &_curveVAO );
+    glBindVertexArray( _curveVAO );
+
+    glGenBuffers( 1, &_curveVBO );
+    glBindBuffer( GL_ARRAY_BUFFER, _curveVBO );
+    glBufferData( GL_ARRAY_BUFFER, curvePoints.size( ) * sizeof( glm::vec3 ), curvePoints.data( ), GL_STATIC_DRAW );
+
+    glEnableVertexAttribArray( _lightingShaderAttributeLocations.vPos );
+    glVertexAttribPointer( _lightingShaderAttributeLocations.vPos, 3, GL_FLOAT, GL_FALSE, sizeof( glm::vec3 ), (void*)0 );
+
+    // No normals needed since we will just draw a line
+    glBindVertexArray( 0 );
+
+    // store number of curve points in a variable for rendering
+    _curvePointCount = (GLsizei)curvePoints.size( );
+
+    // --------------------------------------------------------------
+
+    // Initialize starting positions of the carts
+    _startPosition = evaluateBezier( 0.0f, _p0, _p1, _p2, _p3 );
+
+    _aiCartPosition = _startPosition;
+    _pPlayerCar->setPosition( _startPosition );
+
+    // Set forward direction of carts
+    glm::vec3 nextPos   = evaluateBezier( _startT + 0.001f, _p0, _p1, _p2, _p3 );
+    glm::vec3 direction = glm::normalize( nextPos - _startPosition );
+
+    _pPlayerCar->setForwardDirection( direction );
+
+    _cams[CAM_ID::ARC_CAM] = new CSCI441::ArcballCam( );
+    _cams[CAM_ID::ARC_CAM]->setLookAtPoint( _pPlayerCar->getPosition( ) );
+    _cams[CAM_ID::ARC_CAM]->setRadius( 15 );
+    _cams[CAM_ID::ARC_CAM]->setTheta( -M_PI / 3.0f );
+    _cams[CAM_ID::ARC_CAM]->setPhi( 8 * M_PI / 6 );
+    _cams[CAM_ID::ARC_CAM]->recomputeOrientation( );
+
+    _cams[CAM_ID::FIXED_CAM] = new CSCI441::ArcballCam( );
+    _cams[CAM_ID::FIXED_CAM]->setLookAtPoint( _pPlayerCar->getPosition( ) );
+    _cams[CAM_ID::FIXED_CAM]->setRadius( 15 );
+    _cams[CAM_ID::FIXED_CAM]->setTheta( M_PI / 2 );
+    _cams[CAM_ID::FIXED_CAM]->setPhi( 8 * M_PI / 6 );
+    _cams[CAM_ID::FIXED_CAM]->recomputeOrientation( );
 
     camID = CAM_ID::FIXED_CAM;
 
-    // TODO #6: set lighting uniforms
-    glm::vec3 lightDirection = glm::vec3(-1.0f, -1.0f, -1.0f);
-    glm::vec3 lightColor = glm::vec3(0.2f, 0.2f, 0.2f);
-    glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle(), _lightingShaderUniformLocations.lightColor, 1, glm::value_ptr(lightColor));
-    glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle(), _lightingShaderUniformLocations.lightPosition, 1, glm::value_ptr(lightDirection));
+    glm::vec3 lightDirection = glm::vec3( -1.0f, -1.0f, -1.0f );
+    glm::vec3 lightColor     = glm::vec3( 0.2f, 0.2f, 0.2f );
+    glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.lightColor, 1, glm::value_ptr( lightColor ) );
+    glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.lightPosition, 1, glm::value_ptr( lightDirection ) );
 
     //******************************************************************
-    glm::vec3 playerPosition = _pPlayerCar->getPosition();
-    glm::vec3 spotLightPosition = glm::vec3(-110.0f,30.0f,-110.0f); // Spotlight above the Being
-    glm::vec3 spotLightDirection = glm::vec3(0.0f,-1.0f,0.0f);
+    glm::vec3 playerPosition     = _pPlayerCar->getPosition( );
+    glm::vec3 spotLightPosition  = glm::vec3( -110.0f, 30.0f, -110.0f ); // Spotlight above the Being
+    glm::vec3 spotLightDirection = glm::vec3( 0.0f, -1.0f, 0.0f );
     GLfloat spotLightCutoff      = glm::cos( glm::radians( 40.0f ) );
     GLfloat spotLightOuterCutoff = glm::cos( glm::radians( 70.0f ) );
 
@@ -186,233 +302,251 @@ void FPEngine::mSetupScene() {
     glProgramUniform1f( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.spotLightCutoff, spotLightCutoff );
 
     // Pass lighting data to terrain shader
-    glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.lightPosition, 1, glm::value_ptr(lightDirection));
-    glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.lightColor, 1, glm::value_ptr(lightColor));
-    glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.camPosition, 1, glm::value_ptr(_cams[camID]->getPosition()));
+    glProgramUniform3fv( _terrainShaderProgram->getShaderProgramHandle( ), _terrainShaderUniformLocations.lightPosition, 1, glm::value_ptr( lightDirection ) );
+    glProgramUniform3fv( _terrainShaderProgram->getShaderProgramHandle( ), _terrainShaderUniformLocations.lightColor, 1, glm::value_ptr( lightColor ) );
+    glProgramUniform3fv( _terrainShaderProgram->getShaderProgramHandle( ), _terrainShaderUniformLocations.camPosition, 1, glm::value_ptr( _cams[camID]->getPosition( ) ) );
     // Pass spotlight data
-    glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.spotLightPosition, 1, glm::value_ptr(spotLightPosition));
-    glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.spotLightDirection, 1, glm::value_ptr(spotLightDirection));
-    glProgramUniform1f(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.spotLightOuterCutoff, spotLightOuterCutoff);
-    glProgramUniform1f(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.spotLightCutoff, spotLightCutoff);
+    glProgramUniform3fv( _terrainShaderProgram->getShaderProgramHandle( ), _terrainShaderUniformLocations.spotLightPosition, 1, glm::value_ptr( spotLightPosition ) );
+    glProgramUniform3fv( _terrainShaderProgram->getShaderProgramHandle( ), _terrainShaderUniformLocations.spotLightDirection, 1, glm::value_ptr( spotLightDirection ) );
+    glProgramUniform1f( _terrainShaderProgram->getShaderProgramHandle( ), _terrainShaderUniformLocations.spotLightOuterCutoff, spotLightOuterCutoff );
+    glProgramUniform1f( _terrainShaderProgram->getShaderProgramHandle( ), _terrainShaderUniformLocations.spotLightCutoff, spotLightCutoff );
 
     // Precompute Arc Length Parameterization lookup table
     int NUM_SAMPLES = 1000;
-    _arcLengths = std::vector<float>(NUM_SAMPLES+1, 0.0f);
-    _sampleTs = std::vector<float>(NUM_SAMPLES+1, 0.0f);
+    _arcLengths     = std::vector<float>( NUM_SAMPLES + 1, 0.0f );
+    _sampleTs       = std::vector<float>( NUM_SAMPLES + 1, 0.0f );
 
-    for (int i = 0; i <= NUM_SAMPLES; ++i) {
-        float t = (float)i / (float)NUM_SAMPLES;
+    for ( int i = 0; i <= NUM_SAMPLES; ++i )
+    {
+        float t      = (float)i / (float)NUM_SAMPLES;
         _sampleTs[i] = t;
     }
 
-    glm::vec3 prevPoint = evaluateBezier(0.0f, _p0, _p1, _p2, _p3);
-    _totalLength = 0.0f;
-    _arcLengths[0] = 0.0f;
+    glm::vec3 prevPoint = evaluateBezier( 0.0f, _p0, _p1, _p2, _p3 );
+    _totalLength        = 0.0f;
+    _arcLengths[0]      = 0.0f;
 
-    for (int i = 1; i <= NUM_SAMPLES; ++i) {
-        glm::vec3 currPoint = evaluateBezier(_sampleTs[i], _p0, _p1, _p2, _p3);
-        float segmentLength = glm::length(currPoint - prevPoint);
+    for ( int i = 1; i <= NUM_SAMPLES; ++i )
+    {
+        glm::vec3 currPoint = evaluateBezier( _sampleTs[i], _p0, _p1, _p2, _p3 );
+        float segmentLength = glm::length( currPoint - prevPoint );
         _totalLength += segmentLength;
         _arcLengths[i] = _totalLength;
-        prevPoint = currPoint;
+        prevPoint      = currPoint;
     }
 
-    printf("Directional Light Color: (%f, %f, %f)\n", lightColor.x, lightColor.y,lightColor.z);
-    printf("Directional Light Direction: (%f, %f, %f)\n", lightDirection.x, lightDirection.y, lightDirection.z);
-    printf("Spotlight Position: (%f, %f, %f)\n", spotLightPosition.x, spotLightPosition.y, spotLightPosition.z);
-    printf("Spotlight Direction: (%f, %f, %f)\n", spotLightDirection.x, spotLightDirection.y, spotLightDirection.z);
-    printf("Spotlight Cutoffs: Inner %f, Outer %f\n", spotLightCutoff, spotLightOuterCutoff);
-
+    printf( "Directional Light Color: (%f, %f, %f)\n", lightColor.x, lightColor.y, lightColor.z );
+    printf( "Directional Light Direction: (%f, %f, %f)\n", lightDirection.x, lightDirection.y, lightDirection.z );
+    printf( "Spotlight Position: (%f, %f, %f)\n", spotLightPosition.x, spotLightPosition.y, spotLightPosition.z );
+    printf( "Spotlight Direction: (%f, %f, %f)\n", spotLightDirection.x, spotLightDirection.y, spotLightDirection.z );
+    printf( "Spotlight Cutoffs: Inner %f, Outer %f\n", spotLightCutoff, spotLightOuterCutoff );
 }
 
-bool FPEngine::loadHeightMap(const std::string& filepath) {
-    unsigned char* data = stbi_load(filepath.c_str(), &heightMapWidth, &heightMapHeight, &heightMapChannels, 1); // Load as grayscale
-    if (!data) {
-        fprintf(stderr, "Failed to load height map: %s\n", filepath.c_str());
+bool FPEngine::loadHeightMap( const std::string& filepath )
+{
+    unsigned char* data = stbi_load( filepath.c_str( ), &heightMapWidth, &heightMapHeight, &heightMapChannels, 1 ); // Load as grayscale
+    if ( !data )
+    {
+        fprintf( stderr, "Failed to load height map: %s\n", filepath.c_str( ) );
         return false;
     }
 
     // Create OpenGL texture
-    glGenTextures(1, &_heightMapTextureID);
-    glBindTexture(GL_TEXTURE_2D, _heightMapTextureID);
+    glGenTextures( 1, &_heightMapTextureID );
+    glBindTexture( GL_TEXTURE_2D, _heightMapTextureID );
 
     // Set texture parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 
     // Upload texture data
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, heightMapWidth, heightMapHeight, 0, GL_RED, GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_RED, heightMapWidth, heightMapHeight, 0, GL_RED, GL_UNSIGNED_BYTE, data );
+    glGenerateMipmap( GL_TEXTURE_2D );
 
     // Populate heightData for CPU-side height queries
-    heightData.resize(heightMapWidth * heightMapHeight);
-    for(int i = 0; i < heightMapWidth * heightMapHeight; ++i){
-        heightData[i] = static_cast<float>(data[i]) / 255.0f * maxHeight;
+    heightData.resize( heightMapWidth * heightMapHeight );
+    for ( int i = 0; i < heightMapWidth * heightMapHeight; ++i )
+    {
+        heightData[i] = static_cast<float>( data[i] ) / 255.0f * maxHeight;
     }
 
-    stbi_image_free(data);
+    stbi_image_free( data );
     return true;
 }
 
-GLuint FPEngine::_loadAndRegisterTexture(const char *FILENAME) {
+GLuint FPEngine::_loadAndRegisterTexture( const char* FILENAME )
+{
     // our handle to the GPU
     GLuint textureHandle = 0;
 
     // enable setting to prevent image from being upside down
-    stbi_set_flip_vertically_on_load(true);
+    stbi_set_flip_vertically_on_load( true );
 
     // will hold image parameters after load
     GLint imageWidth, imageHeight, imageChannels;
     // load image from file
-    GLubyte *data = stbi_load(FILENAME, &imageWidth, &imageHeight, &imageChannels, 0);
+    GLubyte* data = stbi_load( FILENAME, &imageWidth, &imageHeight, &imageChannels, 0 );
     // if data was read from file
-    if (data) {
-        const GLint STORAGE_TYPE = (imageChannels == 4 ? GL_RGBA : GL_RGB);
-        glGenTextures(1, &textureHandle);
-        glBindTexture(GL_TEXTURE_2D, textureHandle);
+    if ( data )
+    {
+        const GLint STORAGE_TYPE = ( imageChannels == 4 ? GL_RGBA : GL_RGB );
+        glGenTextures( 1, &textureHandle );
+        glBindTexture( GL_TEXTURE_2D, textureHandle );
         // set texture parameters
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
 
-        glTexImage2D(GL_TEXTURE_2D, 0, STORAGE_TYPE, imageWidth, imageHeight, 0, STORAGE_TYPE, GL_UNSIGNED_BYTE, data);
+        glTexImage2D( GL_TEXTURE_2D, 0, STORAGE_TYPE, imageWidth, imageHeight, 0, STORAGE_TYPE, GL_UNSIGNED_BYTE, data );
 
-
-        fprintf(stdout, "[INFO]: %s texture map read in with handle %d\n", FILENAME, textureHandle);
+        fprintf( stdout, "[INFO]: %s texture map read in with handle %d\n", FILENAME, textureHandle );
 
         // release image memory from CPU - it now lives on the GPU
-        stbi_image_free(data);
-    } else {
+        stbi_image_free( data );
+    }
+    else
+    {
         // load failed
-        fprintf(stderr, "[ERROR]: Could not load texture map \"%s\"\n", FILENAME);
+        fprintf( stderr, "[ERROR]: Could not load texture map \"%s\"\n", FILENAME );
     }
 
     // return generated texture handle
     return textureHandle;
 }
 
-GLuint FPEngine::_loadAndRegisterTrackFilter(const char *FILENAME) {
+GLuint FPEngine::_loadAndRegisterTrackFilter( const char* FILENAME )
+{
     // our handle to the GPU
     GLuint textureHandle = 0;
 
     // enable setting to prevent image from being upside down
-    stbi_set_flip_vertically_on_load(true);
+    stbi_set_flip_vertically_on_load( true );
 
     // will hold image parameters after load
     GLint imageWidth, imageHeight, imageChannels;
     // load image from file
-    GLubyte *data = stbi_load(FILENAME, &imageWidth, &imageHeight, &imageChannels, 0);
+    GLubyte* data = stbi_load( FILENAME, &imageWidth, &imageHeight, &imageChannels, 0 );
     // if data was read from file
-    if (data) {
-        const GLint STORAGE_TYPE = (imageChannels == 1 ? GL_DEPTH_COMPONENT : GL_RGB);
-        glGenTextures(1, &textureHandle);
-        glBindTexture(GL_TEXTURE_2D, textureHandle);
+    if ( data )
+    {
+        const GLint STORAGE_TYPE = ( imageChannels == 1 ? GL_DEPTH_COMPONENT : GL_RGB );
+        glGenTextures( 1, &textureHandle );
+        glBindTexture( GL_TEXTURE_2D, textureHandle );
         // set texture parameters
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
 
-        glTexImage2D(GL_TEXTURE_2D, 0, STORAGE_TYPE, imageWidth, imageHeight, 0, STORAGE_TYPE, GL_UNSIGNED_BYTE, data);
+        glTexImage2D( GL_TEXTURE_2D, 0, STORAGE_TYPE, imageWidth, imageHeight, 0, STORAGE_TYPE, GL_UNSIGNED_BYTE, data );
 
-        fprintf(stdout, "[INFO]: %s height map read in with handle %d\n", FILENAME, textureHandle);
+        fprintf( stdout, "[INFO]: %s height map read in with handle %d\n", FILENAME, textureHandle );
 
         // release image memory from CPU - it now lives on the GPU
-        stbi_image_free(data);
-    } else {
+        stbi_image_free( data );
+    }
+    else
+    {
         // load failed
-        fprintf(stderr, "[ERROR]: Could not load texture map \"%s\"\n", FILENAME);
+        fprintf( stderr, "[ERROR]: Could not load texture map \"%s\"\n", FILENAME );
     }
 
     // return generated texture handle
     return textureHandle;
 }
 
-float FPEngine::getTerrainHeight(float x, float z) const {
+float FPEngine::getTerrainHeight( float x, float z ) const
+{
     // Map world coordinates to heightmap coordinates
     float terrainX = x + _centerX;
     float terrainZ = z + _centerZ;
 
     // Clamp the coordinates to the height map boundaries
-    if (terrainX < 0.0f) terrainX = 0.0f;
-    if (terrainZ < 0.0f) terrainZ = 0.0f;
-    if (terrainX >= heightMapWidth - 1) terrainX = heightMapWidth - 1.001f; // Prevent overflow
-    if (terrainZ >= heightMapHeight - 1) terrainZ = heightMapHeight - 1.001f;
+    if ( terrainX < 0.0f )
+        terrainX = 0.0f;
+    if ( terrainZ < 0.0f )
+        terrainZ = 0.0f;
+    if ( terrainX >= heightMapWidth - 1 )
+        terrainX = heightMapWidth - 1.001f; // Prevent overflow
+    if ( terrainZ >= heightMapHeight - 1 )
+        terrainZ = heightMapHeight - 1.001f;
 
     // Get the integer and fractional parts
-    int x0 = static_cast<int>(floor(terrainX));
-    int z0 = static_cast<int>(floor(terrainZ));
+    int x0   = static_cast<int>( floor( terrainX ) );
+    int z0   = static_cast<int>( floor( terrainZ ) );
     float tx = terrainX - x0;
     float tz = terrainZ - z0;
 
     // Retrieve heights from the four surrounding vertices
     float h00 = heightData[z0 * heightMapWidth + x0];
-    float h10 = heightData[z0 * heightMapWidth + (x0 + 1)];
-    float h01 = heightData[(z0 + 1) * heightMapWidth + x0];
-    float h11 = heightData[(z0 + 1) * heightMapWidth + (x0 + 1)];
+    float h10 = heightData[z0 * heightMapWidth + ( x0 + 1 )];
+    float h01 = heightData[( z0 + 1 ) * heightMapWidth + x0];
+    float h11 = heightData[( z0 + 1 ) * heightMapWidth + ( x0 + 1 )];
 
     // Bi-linear interpolation
-    float h0 = h00 * (1 - tx) + h10 * tx;
-    float h1 = h01 * (1 - tx) + h11 * tx;
-    float interpolatedHeight = h0 * (1 - tz) + h1 * tz;
+    float h0                 = h00 * ( 1 - tx ) + h10 * tx;
+    float h1                 = h01 * ( 1 - tx ) + h11 * tx;
+    float interpolatedHeight = h0 * ( 1 - tz ) + h1 * tz;
 
     return interpolatedHeight;
 }
 
-void FPEngine::_generateEnvironment() {
+void FPEngine::_generateEnvironment( )
+{
     //******************************************************************
     // parameters to make up our grid size and spacing, feel free to
     // play around with this
-    const GLfloat GRID_WIDTH = WORLD_SIZE * 1.8f;
-    const GLfloat GRID_LENGTH = WORLD_SIZE * 1.8f;
-    const GLfloat GRID_SPACING_WIDTH = 1.0f;
+    const GLfloat GRID_WIDTH          = WORLD_SIZE * 1.8f;
+    const GLfloat GRID_LENGTH         = WORLD_SIZE * 1.8f;
+    const GLfloat GRID_SPACING_WIDTH  = 1.0f;
     const GLfloat GRID_SPACING_LENGTH = 1.0f;
     // precomputed parameters based on above
-    const GLfloat LEFT_END_POINT = -GRID_WIDTH / 2.0f - 5.0f;
-    const GLfloat RIGHT_END_POINT = GRID_WIDTH / 2.0f + 5.0f;
+    const GLfloat LEFT_END_POINT   = -GRID_WIDTH / 2.0f - 5.0f;
+    const GLfloat RIGHT_END_POINT  = GRID_WIDTH / 2.0f + 5.0f;
     const GLfloat BOTTOM_END_POINT = -GRID_LENGTH / 2.0f - 5.0f;
-    const GLfloat TOP_END_POINT = GRID_LENGTH / 2.0f + 5.0f;
+    const GLfloat TOP_END_POINT    = GRID_LENGTH / 2.0f + 5.0f;
     //******************************************************************
 
     //******************************************************************
     // draws a grid as our ground plane
     // do not edit this next section
 
-    _gridColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    _gridColor = glm::vec3( 1.0f, 1.0f, 1.0f );
     //******************************************************************
 }
 
 //*************************************************************************************
 //
 // Rendering / Drawing Functions - this is where the magic happens!
-void FPEngine::_computeAndSendMatrixUniforms(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) const {
+void FPEngine::_computeAndSendMatrixUniforms( glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx ) const
+{
     // For lighting shader
-    _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.modelMatrix, modelMtx);
+    _lightingShaderProgram->setProgramUniform( _lightingShaderUniformLocations.modelMatrix, modelMtx );
     glm::mat4 mvpMtx = projMtx * viewMtx * modelMtx;
-    _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.mvpMatrix, mvpMtx);
-    glm::mat3 normalMtx = glm::mat3(glm::transpose(glm::inverse(modelMtx)));
-    _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.vNormalMatrix, normalMtx);
+    _lightingShaderProgram->setProgramUniform( _lightingShaderUniformLocations.mvpMatrix, mvpMtx );
+    glm::mat3 normalMtx = glm::mat3( glm::transpose( glm::inverse( modelMtx ) ) );
+    _lightingShaderProgram->setProgramUniform( _lightingShaderUniformLocations.vNormalMatrix, normalMtx );
     // Set camera position uniform
-    _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.camPosition, _cams[camID]->getPosition());
+    _lightingShaderProgram->setProgramUniform( _lightingShaderUniformLocations.camPosition, _cams[camID]->getPosition( ) );
 
     // For terrain shader
-    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.mvpMatrix, mvpMtx);
-    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.modelMatrix, modelMtx);
-    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.normalMatrix, normalMtx);
-    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.camPosition, _cams[camID]->getPosition());
+    _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.mvpMatrix, mvpMtx );
+    _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.modelMatrix, modelMtx );
+    _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.normalMatrix, normalMtx );
+    _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.camPosition, _cams[camID]->getPosition( ) );
 }
 
-void FPEngine::_renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) const {
-
+void FPEngine::_renderScene( glm::mat4 viewMtx, glm::mat4 projMtx ) const
+{
     // Save current depth function and depth mask state
     GLint prevDepthFunc;
     glGetIntegerv( GL_DEPTH_FUNC, &prevDepthFunc );
@@ -448,255 +582,395 @@ void FPEngine::_renderScene(glm::mat4 viewMtx, glm::mat4 projMtx) const {
     glDepthMask( prevDepthMask );
 
     // 1. Draw Terrain with Terrain Shader
-    _terrainShaderProgram->useProgram();
+    _terrainShaderProgram->useProgram( );
 
     // Bind heightmap texture
-    glActiveTexture(GL_TEXTURE0 + HEIGHT_MAP_SLOT);
-    glBindTexture(GL_TEXTURE_2D, _heightMapTextureID);
-    glActiveTexture(GL_TEXTURE0 + TRACK_FILTER_SLOT);
-    glBindTexture(GL_TEXTURE_2D, _trackFilter);
-    glActiveTexture(GL_TEXTURE0 + TRACK_TEXTURE_SLOT);
-    glBindTexture(GL_TEXTURE_2D, _trackTexture);
-    glActiveTexture(GL_TEXTURE0 + SCENE_TEXTURE_SLOT);
-    glBindTexture(GL_TEXTURE_2D, _sceneTexture);
-    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.heightMap, HEIGHT_MAP_SLOT);
-    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.trackFilter, TRACK_FILTER_SLOT);
-    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.trackTexture, TRACK_TEXTURE_SLOT);
-    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.sceneTexture, SCENE_TEXTURE_SLOT);
-    glm::vec2 texelSize(1.0f / static_cast<float>(heightMapWidth),
-                    1.0f / static_cast<float>(heightMapHeight));
-    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.texelSize, texelSize);
+    glActiveTexture( GL_TEXTURE0 + HEIGHT_MAP_SLOT );
+    glBindTexture( GL_TEXTURE_2D, _heightMapTextureID );
+    glActiveTexture( GL_TEXTURE0 + TRACK_FILTER_SLOT );
+    glBindTexture( GL_TEXTURE_2D, _trackFilter );
+    glActiveTexture( GL_TEXTURE0 + TRACK_TEXTURE_SLOT );
+    glBindTexture( GL_TEXTURE_2D, _trackTexture );
+    glActiveTexture( GL_TEXTURE0 + SCENE_TEXTURE_SLOT );
+    glBindTexture( GL_TEXTURE_2D, _sceneTexture );
+    _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.heightMap, HEIGHT_MAP_SLOT );
+    _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.trackFilter, TRACK_FILTER_SLOT );
+    _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.trackTexture, TRACK_TEXTURE_SLOT );
+    _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.sceneTexture, SCENE_TEXTURE_SLOT );
+    glm::vec2 texelSize( 1.0f / static_cast<float>( heightMapWidth ), 1.0f / static_cast<float>( heightMapHeight ) );
+    _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.texelSize, texelSize );
 
     // Set uniforms
-    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.maxHeight, maxHeight);
+    _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.maxHeight, maxHeight );
 
     // Set material color
-    glm::vec3 terrainColor(0.5f, 0.8f, 0.2f); // The color of the terrain
-    _terrainShaderProgram->setProgramUniform(_terrainShaderUniformLocations.materialColor, terrainColor);
+    glm::vec3 terrainColor( 0.5f, 0.8f, 0.2f ); // The color of the terrain
+    _terrainShaderProgram->setProgramUniform( _terrainShaderUniformLocations.materialColor, terrainColor );
 
     // Set matrices
-    glm::mat4 modelMtxTerrain = glm::mat4(1.0f);
-    _computeAndSendMatrixUniforms(modelMtxTerrain, viewMtx, projMtx);
+    glm::mat4 modelMtxTerrain = glm::mat4( 1.0f );
+    _computeAndSendMatrixUniforms( modelMtxTerrain, viewMtx, projMtx );
 
     // Draw the terrain
-    glBindVertexArray(_terrainVAO);
-    glDrawElements(GL_TRIANGLES, terrainIndices.size(), GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
+    glBindVertexArray( _terrainVAO );
+    glDrawElements( GL_TRIANGLES, terrainIndices.size( ), GL_UNSIGNED_INT, 0 );
+    glBindVertexArray( 0 );
 
-    // 2. Draw Plane with Lighting Shader
-    _lightingShaderProgram->useProgram();
+    // 2. Draw Car with Lighting Shader
+    _lightingShaderProgram->useProgram( );
 
     // Compute and send matrix uniforms for lighting shader
-    glm::mat4 modelMtxPlane = glm::mat4(1.0f);
-    glm::vec3 playerPos = _pPlayerCar->getPosition();
+    glm::mat4 modelMtxCar = glm::mat4( 1.0f );
 
-    modelMtxPlane = glm::translate(modelMtxPlane, _pPlayerCar->getPosition());
-    _computeAndSendMatrixUniforms(modelMtxPlane, viewMtx, projMtx);
+    modelMtxCar = glm::translate( modelMtxCar, _pPlayerCar->getPosition( ) );
+    _computeAndSendMatrixUniforms( modelMtxCar, viewMtx, projMtx );
 
-    // Draw the plane
-    _pPlayerCar->draw(modelMtxPlane, viewMtx, projMtx);
+    // Draw the car
+    _pPlayerCar->draw( modelMtxCar, viewMtx, projMtx );
+
+    float currentPlayerSpeed = _playerSpeed;
+
+    if ( currentPlayerSpeed > _speedThreshold )
+    {
+        _speedLineShaderProgram->useProgram( );
+
+        // Compute MVP using the same model matrix as for the cart
+        glm::mat4 mvpMtx = projMtx * viewMtx * modelMtxCar;
+
+        glProgramUniformMatrix4fv(_speedLineShaderProgram->getShaderProgramHandle(),
+                                   _speedLineUniformLocations.modelMatrix, 1, GL_FALSE, glm::value_ptr(modelMtxCar));
+
+        glProgramUniform3fv(_speedLineShaderProgram->getShaderProgramHandle(),
+                             _speedLineUniformLocations.cartPosition, 1, glm::value_ptr(_pPlayerCar->getPosition()));
+
+        glProgramUniform3fv(_speedLineShaderProgram->getShaderProgramHandle(),
+                             _speedLineUniformLocations.cartDirection, 1, glm::value_ptr(_pPlayerCar->getForwardDirection()));
+
+        _speedLineShaderProgram->setProgramUniform( _speedLineUniformLocations.mvpMatrix, mvpMtx );
+        _speedLineShaderProgram->setProgramUniform( _speedLineUniformLocations.cartSpeed, currentPlayerSpeed );
+        _speedLineShaderProgram->setProgramUniform( _speedLineUniformLocations.materialColor, glm::vec3( 1.0f, 0.0f, 0.0f ) );
+
+        // Enable blending for the speed lines to overlay
+        glEnable( GL_BLEND );
+        glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+
+        // Draw the same geometry for the cart again, but now with speed lines
+        _pPlayerCar->draw( modelMtxCar, viewMtx, projMtx );
+
+        glDisable( GL_BLEND );
+    }
 
     // Compute transformations for the AI cart
-    glm::mat4 modelMtxCart = glm::mat4(1.0f);
-    modelMtxCart = glm::translate(modelMtxCart, _aiCartPosition);
-    modelMtxCart = glm::scale(modelMtxCart, glm::vec3(0.5f));
-
-    // Calculate tangent to Bézier curve so car faces the curve direction
-    glm::vec3 nextPosition = evaluateBezier(_bezierT + 0.001f, _p0, _p1, _p2, _p3);
-    glm::vec3 direction = glm::normalize(nextPosition - _aiCartPosition);
+    glm::mat4 modelMtxAICar = glm::mat4( 1.0f );
 
     // Create a rotation matrix so the cart faces `direction`
-    glm::vec3 up(0.0f, 1.0f, 0.0f);
-    glm::vec3 right = glm::normalize(glm::cross(up, direction));
-    glm::vec3 adjustedUp = glm::cross(direction, right);
+    glm::vec3 up( 0.0f, 1.0f, 0.0f );
+    glm::vec3 right      = glm::normalize( glm::cross( up, _aiCartDirection ) );
+    glm::vec3 adjustedUp = glm::cross( _aiCartDirection, right );
 
-    glm::mat4 orientation(1.0f);
-    orientation[0] = glm::vec4(right, 0.0f);
-    orientation[1] = glm::vec4(adjustedUp, 0.0f);
-    orientation[2] = glm::vec4(direction, 0.0f);
+    glm::mat4 orientation( 1.0f );
+    orientation[0] = glm::vec4( right, 0.0f );
+    orientation[1] = glm::vec4( adjustedUp, 0.0f );
+    orientation[2] = glm::vec4( -_aiCartDirection, 0.0f );
 
     // Combine orientation with the model matrix for drawing
-    modelMtxCart = glm::translate(glm::mat4(1.0f), _aiCartPosition) * glm::mat4(orientation) * glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
+    modelMtxAICar = glm::translate( glm::mat4( 1.0f ), _aiCartPosition ) * glm::mat4( orientation ) * glm::scale( glm::mat4( 1.0f ), glm::vec3( 0.5f ) );
 
-    _computeAndSendMatrixUniforms(modelMtxCart, viewMtx, projMtx);
+    _computeAndSendMatrixUniforms( modelMtxAICar, viewMtx, projMtx );
 
     // Set a distinct color for the AI cart TODO: Identify what color we want the ai cart to be
     // _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.materialColor, glm::vec3(1.0f, 0.0f, 0.0f));
 
-    // Draw a placeholder cube
-    CSCI441::drawSolidCube(1.0f);
+    _pAICar->draw( modelMtxAICar, viewMtx, projMtx );
 
     // After drawing the cart normally
-    float currentCartSpeed = _aiCartSpeed; // Retrieve or compute your current cart speed
+    float currentAISpeed = _aiSpeed;
 
-    if (currentCartSpeed > _speedThreshold) {
-        _speedLineShaderProgram->useProgram();
+    if ( currentAISpeed > _speedThresholdAI )
+    {
+        _speedLineShaderProgram->useProgram( );
 
         // Compute MVP using the same model matrix as for the cart
-        glm::mat4 mvpMtx = projMtx * viewMtx * modelMtxCart;
+        glm::mat4 mvpMtx = projMtx * viewMtx * modelMtxAICar;
 
         // Set uniforms
-        _speedLineShaderProgram->setProgramUniform(_speedLineUniformLocations.mvpMatrix, mvpMtx);
-        _speedLineShaderProgram->setProgramUniform(_speedLineUniformLocations.cartSpeed, currentCartSpeed);
-        _speedLineShaderProgram->setProgramUniform(_speedLineUniformLocations.materialColor, glm::vec3(1.0f, 0.0f, 0.0f));
+        glProgramUniformMatrix4fv(_speedLineShaderProgram->getShaderProgramHandle(),
+                                   _speedLineUniformLocations.modelMatrix, 1, GL_FALSE, glm::value_ptr(modelMtxAICar));
 
-        // Possibly enable blending if you want the speed lines to overlay
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glProgramUniform3fv(_speedLineShaderProgram->getShaderProgramHandle(),
+                             _speedLineUniformLocations.cartPosition, 1, glm::value_ptr(_pAICar->getPosition()));
+
+        glProgramUniform3fv(_speedLineShaderProgram->getShaderProgramHandle(),
+                             _speedLineUniformLocations.cartDirection, 1, glm::value_ptr(_pAICar->getForwardDirection()));
+
+        _speedLineShaderProgram->setProgramUniform( _speedLineUniformLocations.mvpMatrix, mvpMtx );
+        _speedLineShaderProgram->setProgramUniform( _speedLineUniformLocations.cartSpeed, currentAISpeed );
+        _speedLineShaderProgram->setProgramUniform( _speedLineUniformLocations.materialColor, glm::vec3( 1.0f, 0.0f, 0.0f ) );
+
+        // Enable blending for the speed lines to overlay
+        glEnable( GL_BLEND );
+        glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 
         // Draw the same geometry for the cart again, but now with speed lines
-        CSCI441::drawSolidCube(1.0f);
+        _pAICar->draw( modelMtxAICar, viewMtx, projMtx );
 
-        // If you changed blending or other states, revert them here
-        glDisable(GL_BLEND);
+        glDisable( GL_BLEND );
+    }
+
+    // TODO: Remove this test code as well
+
+    // Draw the curve line
+    _lightingShaderProgram->useProgram( );
+    glm::mat4 modelMtxCurve = glm::mat4( 1.0f );
+    _computeAndSendMatrixUniforms( modelMtxCurve, viewMtx, projMtx );
+
+    // Set material color for the line (e.g., white)
+    _lightingShaderProgram->setProgramUniform( _lightingShaderUniformLocations.materialDiffuse, glm::vec3( 1.0f, 1.0f, 1.0f ) );
+    _lightingShaderProgram->setProgramUniform( _lightingShaderUniformLocations.materialSpecular, glm::vec3( 0.0f ) );
+    _lightingShaderProgram->setProgramUniform( _lightingShaderUniformLocations.materialShine, 1.0f );
+    _lightingShaderProgram->setProgramUniform( _lightingShaderUniformLocations.isEmitter, 0 );
+
+    glBindVertexArray( _curveVAO );
+    glDrawArrays( GL_LINE_STRIP, 0, _curvePointCount );
+    glBindVertexArray( 0 );
+
+    // Draw control points as small spheres
+    for (auto cPoint : _circleControlPoints)
+    {
+        glm::mat4 modelMtxCP = glm::translate( glm::mat4( 1.0f ), cPoint );
+        // scale down so sphere is small
+        modelMtxCP = glm::scale( modelMtxCP, glm::vec3( 0.1f ) );
+        _computeAndSendMatrixUniforms( modelMtxCP, viewMtx, projMtx );
+
+        // Use a bright color for the control point
+        _lightingShaderProgram->setProgramUniform( _lightingShaderUniformLocations.materialDiffuse, glm::vec3( 1.0f, 0.0f, 0.0f ) );
+        CSCI441::drawSolidSphere( 1.0f, 8, 8 ); // scaled by modelMtxCP above
     }
 }
 
-void FPEngine::_updateScene(){
+void FPEngine::_updateScene( )
+{
 
-    glm::vec3 playerPos = _pPlayerCar->getPosition();
+    double currentTime = glfwGetTime( );
+    double deltaTime   = currentTime - _lastTime;
+    _lastTime          = currentTime;
+
+    glm::vec3 playerPos = _pPlayerCar->getPosition( );
 
     // Retrieve the terrain height at the plane's current X and Z
-    float terrainHeightPlayer = getTerrainHeight(playerPos.x, playerPos.z);
+    float terrainHeightPlayer = getTerrainHeight( playerPos.x, playerPos.z );
 
     // Define an offset to keep the plane above the terrain
-    float heightOffset = 0.5f; // Adjust as needed for your simulation
-    //printf("Terrain Height: %f\n", terrainHeight);
-    //printf("Plane Height: %f\n", planePos.y);
-    // Ensure the player stays above the terrain
-    if (playerPos.y < terrainHeightPlayer + heightOffset || playerPos.y>terrainHeightPlayer + heightOffset) {
+    float heightOffset = 0.5f;
+
+    //  Ensure the player stays above the terrain
+    if ( playerPos.y < terrainHeightPlayer + heightOffset || playerPos.y > terrainHeightPlayer + heightOffset )
+    {
         playerPos.y = terrainHeightPlayer + heightOffset;
-        _pPlayerCar->setPosition(playerPos);
+        _pPlayerCar->setPosition( playerPos );
     }
-    //keeping the original functionality with moving the cam
-    if(_keys[GLFW_KEY_1]) {
-        //Switch to Fixed
+    // keeping the original functionality with moving the cam
+    if ( _keys[GLFW_KEY_1] )
+    {
+        // Switch to Fixed
         camID = CAM_ID::FIXED_CAM;
     }
-    else if (_keys[GLFW_KEY_2]) {
-        //Switch to arc
+    else if ( _keys[GLFW_KEY_2] )
+    {
+        // Switch to arc
         camID = CAM_ID::ARC_CAM;
     }
-    if(_keys[GLFW_KEY_W] ) {
-        if(!(_pPlayerCar->getPosition().x +0.2f < 100.0f && _pPlayerCar->getPosition().z +0.2f < 100.0f && _pPlayerCar->getPosition().x +0.2f > -100.0f && _pPlayerCar->getPosition().z +0.2f > -100.0f)) { // bounds checking, so that we can stay within the created world
-            _pPlayerCar->_isFalling = true;
-        }
-        _pPlayerCar->moveForward(1.0f);
-        _pPlayerCar->setForwardDirection();
-    }
-    else if(_keys[GLFW_KEY_S] ) {
-        if(!(_pPlayerCar->getPosition().x +0.2f < 100.0f && _pPlayerCar->getPosition().z +0.2f < 100.0f && _pPlayerCar->getPosition().x +0.2f > -100.0f && _pPlayerCar->getPosition().z +0.2f > -100.0f)) { // bounds checking, so that we can stay within the created world
-            _pPlayerCar->_isFalling = true;
-        }
-        _pPlayerCar->moveBackward(1.0f);
-        _pPlayerCar->setForwardDirection();
-    }
-    else {
-        _pPlayerCar->notMoving();
-    }
-    if(_keys[GLFW_KEY_D] ) {
-        if (_pPlayerCar->isMoving) {
-            _pPlayerCar->rotateSelf(-0.1f); // give the axis of travel and whether the axis involves the A key as then we need to inverse the angle
-            _pPlayerCar->setForwardDirection();
-            _cams[CAM_ID::FIXED_CAM]->setTheta(_cams[CAM_ID::FIXED_CAM]->getTheta() + 0.1f);
+    if ( _keys[GLFW_KEY_W] )
+    {
+        // Increase player speed until max speed
+        _playerSpeed += _playerAcceleration * (float)deltaTime;
+        if (_playerSpeed > _playerMaxSpeed) _playerSpeed = _playerMaxSpeed;
 
+        _pPlayerCar->moveForward( _playerSpeed);
+        _pPlayerCar->setForwardDirection( );
+
+        if ( !( _pPlayerCar->getPosition( ).x + 0.2f < 100.0f && _pPlayerCar->getPosition( ).z + 0.2f < 100.0f && _pPlayerCar->getPosition( ).x + 0.2f > -100.0f &&
+                _pPlayerCar->getPosition( ).z + 0.2f > -100.0f ) )
+        { // bounds checking, so that we can stay within the created world
+            _pPlayerCar->_isFalling = true;
+        }
+
+    }
+    else if ( _keys[GLFW_KEY_S] )
+    {
+        _playerSpeed += _playerAcceleration * (float)deltaTime;
+        if (_playerSpeed < _playerMaxSpeed) _playerSpeed = _playerMaxSpeed;
+
+        _pPlayerCar->moveBackward( _playerSpeed  );
+        _pPlayerCar->setForwardDirection( );
+
+        if ( !( _pPlayerCar->getPosition( ).x + 0.2f < 100.0f && _pPlayerCar->getPosition( ).z + 0.2f < 100.0f && _pPlayerCar->getPosition( ).x + 0.2f > -100.0f &&
+                _pPlayerCar->getPosition( ).z + 0.2f > -100.0f ) )
+        { // bounds checking, so that we can stay within the created world
+            _pPlayerCar->_isFalling = true;
+        }
+    }
+    else
+    {
+        // If not pressing W, maybe slow down gradually
+        _playerSpeed -= _playerAcceleration * (float)deltaTime;
+        if (_playerSpeed < 0.0f) _playerSpeed = 0.0f;
+
+        if (_playerSpeed > 0.0f) {
+            _pPlayerCar->moveForward(_playerSpeed);
+            _pPlayerCar->setForwardDirection();
+        } else {
+            _pPlayerCar->notMoving();
+        }
+    }
+    if ( _keys[GLFW_KEY_D] )
+    {
+        if ( _pPlayerCar->isMoving )
+        {
+            _pPlayerCar->rotateSelf( -0.1f ); // give the axis of travel and whether the axis involves the A key as then we need to inverse the angle
+            _pPlayerCar->setForwardDirection( );
+            _cams[CAM_ID::FIXED_CAM]->setTheta( _cams[CAM_ID::FIXED_CAM]->getTheta( ) + 0.1f );
         }
         _pPlayerCar->isTurnRight = true;
-
     }
-    else {
+    else
+    {
         _pPlayerCar->isTurnRight = false;
     }
-    if(_keys[GLFW_KEY_A] ) {
-        if (_pPlayerCar->isMoving) {
-            _pPlayerCar->rotateSelf(0.1f); // give the axis of travel and whether the axis involves the A key as then we need to inverse the angle
-            _pPlayerCar->setForwardDirection();
-            _cams[CAM_ID::FIXED_CAM]->setTheta(_cams[CAM_ID::FIXED_CAM]->getTheta() - 0.1f);
-
+    if ( _keys[GLFW_KEY_A] )
+    {
+        if ( _pPlayerCar->isMoving )
+        {
+            _pPlayerCar->rotateSelf( 0.1f ); // give the axis of travel and whether the axis involves the A key as then we need to inverse the angle
+            _pPlayerCar->setForwardDirection( );
+            _cams[CAM_ID::FIXED_CAM]->setTheta( _cams[CAM_ID::FIXED_CAM]->getTheta( ) - 0.1f );
         }
         _pPlayerCar->isTurnLeft = true;
-
     }
-    else {
+    else
+    {
         _pPlayerCar->isTurnLeft = false;
     }
-    _pPlayerCar->setForwardDirection();
-    _cams[camID]->setLookAtPoint(_pPlayerCar->getPosition());
-    _cams[camID]->recomputeOrientation();
-    _pPlayerCar->update();
-    _moveSpotlight();
+    _pPlayerCar->setForwardDirection( );
+    _cams[camID]->setLookAtPoint( _pPlayerCar->getPosition( ) );
+    _cams[camID]->recomputeOrientation( );
+    _pPlayerCar->update( );
+    _moveSpotlight( );
 
     // Update distance by a delta time
-    double currentTime = glfwGetTime();
-    double deltaTime = currentTime - _lastTime;
-    _lastTime = currentTime;
+    _aiSpeed += _aiAcceleration * (float)deltaTime;
+    if (_aiSpeed > _aiMaxSpeed) _aiSpeed = _aiMaxSpeed;
+    _distanceTraveled -= _aiSpeed * (float)deltaTime;
 
-    _distanceTraveled += _bezierSpeed * (float)deltaTime;
-    if (_distanceTraveled > _totalLength) {
-        _distanceTraveled = fmod(_distanceTraveled, _totalLength); // loop around
+    if ( _distanceTraveled < 0.0f )
+    {
+        _distanceTraveled = fmod( _distanceTraveled + _totalLength, _totalLength ); // loop around
     }
 
-    _bezierT = arcLengthToT(_distanceTraveled, _arcLengths, _sampleTs);
+    _bezierT = arcLengthToT( _distanceTraveled, _arcLengths, _sampleTs );
 
-    _aiCartPosition = evaluateBezier(_bezierT, _p0, _p1, _p2, _p3);
+    int currentCurve = (int)floor( _bezierT * (float)numCurves );
+    float localT     = ( _bezierT * (float)numCurves ) - (float)currentCurve;
+
+    glm::vec3 p0 = _circleControlPoints[currentCurve * 3];
+    glm::vec3 p1 = _circleControlPoints[currentCurve * 3 + 1];
+    glm::vec3 p2 = _circleControlPoints[currentCurve * 3 + 2];
+    glm::vec3 p3 = _circleControlPoints[currentCurve * 3 + 3];
+
+    _aiCartPosition = evaluateBezier( localT, p0, p1, p2, p3 );
 
     // So cart hugs the terrain
-    float terrainHeightCart = getTerrainHeight(_aiCartPosition.x, _aiCartPosition.z);
-    _aiCartPosition.y = terrainHeightCart + 0.5f;
+    float terrainHeightCart = getTerrainHeight( _aiCartPosition.x, _aiCartPosition.z );
+    _aiCartPosition.y       = terrainHeightCart + 0.5f;
 
+    // Now compute the direction (tangent) by evaluating slightly ahead along the curve:
+    float smallStep    = 0.001f; // A small value for forward tangent checking
+    float nextDistance = _distanceTraveled + smallStep;
+    if ( nextDistance > _totalLength )
+    {
+        nextDistance = fmod( nextDistance, _totalLength );
+    }
+
+    // Convert nextDistance to nextT
+    float nextT = arcLengthToT( nextDistance, _arcLengths, _sampleTs );
+
+    // Find which curve segment for nextT
+    int nextCurve    = (int)floor( nextT * (float)numCurves );
+    float nextLocalT = ( nextT * (float)numCurves ) - (float)nextCurve;
+
+    glm::vec3 q0 = _circleControlPoints[nextCurve * 3];
+    glm::vec3 q1 = _circleControlPoints[nextCurve * 3 + 1];
+    glm::vec3 q2 = _circleControlPoints[nextCurve * 3 + 2];
+    glm::vec3 q3 = _circleControlPoints[nextCurve * 3 + 3];
+
+    glm::vec3 nextPos = evaluateBezier( nextLocalT, q0, q1, q2, q3 );
+
+    // Compute direction vector
+    _aiCartDirection = glm::normalize( _aiCartPosition - nextPos );
 }
 
-void FPEngine::handleKeyEvent(GLint key, GLint action) {
-    if(key != GLFW_KEY_UNKNOWN)
-        _keys[key] = ((action == GLFW_PRESS) || (action == GLFW_REPEAT));
+void FPEngine::handleKeyEvent( GLint key, GLint action )
+{
+    if ( key != GLFW_KEY_UNKNOWN )
+        _keys[key] = ( ( action == GLFW_PRESS ) || ( action == GLFW_REPEAT ) );
 
-    if(action == GLFW_PRESS) {
-        switch( key ) {
+    if ( action == GLFW_PRESS )
+    {
+        switch ( key )
+        {
             // quit!
             case GLFW_KEY_Q:
-            case GLFW_KEY_ESCAPE:
-                setWindowShouldClose();
-            break;
+            case GLFW_KEY_ESCAPE: setWindowShouldClose( ); break;
 
             default: break; // suppress CLion warning
         }
     }
 }
 
-void FPEngine::handleMouseButtonEvent(GLint button, GLint action) {
+void FPEngine::handleMouseButtonEvent( GLint button, GLint action )
+{
     // if the event is for the left mouse button
-    if( button == GLFW_MOUSE_BUTTON_LEFT ) {
+    if ( button == GLFW_MOUSE_BUTTON_LEFT )
+    {
         // update the left mouse button's state
         _leftMouseButtonState = action;
     }
 }
 
-void FPEngine::handleCursorPositionEvent(glm::vec2 currMousePosition) {
+void FPEngine::handleCursorPositionEvent( glm::vec2 currMousePosition )
+{
     // if mouse hasn't moved in the window, prevent camera from flipping out
-    if(_mousePosition.x == MOUSE_UNINITIALIZED) {
+    if ( _mousePosition.x == MOUSE_UNINITIALIZED )
+    {
         _mousePosition = currMousePosition;
     }
 
     // if the left mouse button is being held down while the mouse is moving
-    if(_leftMouseButtonState == GLFW_PRESS) {
-        if(_keys[GLFW_KEY_LEFT_SHIFT] || _keys[GLFW_KEY_RIGHT_SHIFT]) { // this is to check if shift is being pressed so we can zoom
-            if(_mousePosition.y - currMousePosition.y < 0) { // zoom in or out
-                _cams[camID]->moveBackward(_cameraSpeed.x);
+    if ( _leftMouseButtonState == GLFW_PRESS )
+    {
+        if ( _keys[GLFW_KEY_LEFT_SHIFT] || _keys[GLFW_KEY_RIGHT_SHIFT] )
+        { // this is to check if shift is being pressed so we can zoom
+            if ( _mousePosition.y - currMousePosition.y < 0 )
+            { // zoom in or out
+                _cams[camID]->moveBackward( _cameraSpeed.x );
             }
-            else {
-                _cams[camID]->moveForward(_cameraSpeed.x);
+            else
+            {
+                _cams[camID]->moveForward( _cameraSpeed.x );
             }
         }
-        else {
+        else
+        {
             // rotate the camera by the distance the mouse moved
-            if (camID != CAM_ID::FIXED_CAM) _cams[camID]->rotate((currMousePosition.x - _mousePosition.x) * 0.005f,
-                             (_mousePosition.y - currMousePosition.y) * 0.005f );
+            if ( camID != CAM_ID::FIXED_CAM )
+                _cams[camID]->rotate( ( currMousePosition.x - _mousePosition.x ) * 0.005f, ( _mousePosition.y - currMousePosition.y ) * 0.005f );
         }
     }
 
     // update the mouse position
     _mousePosition = currMousePosition;
 }
+
 GLuint FPEngine::_loadAndRegisterSkyboxTexture( const char* FILENAME )
 {
     // Our handle to the GPU texture
@@ -748,156 +1022,156 @@ GLuint FPEngine::_loadAndRegisterSkyboxTexture( const char* FILENAME )
     // Return generated texture handle
     return textureHandle;
 }
-void FPEngine::_createGroundBuffers() {
+
+void FPEngine::_createGroundBuffers( )
+{
     // Define scaling factors
     float scaleX = 1.0f; // Adjust as needed
     float scaleZ = 1.0f; // Adjust as needed
 
-    _centerX = (heightMapWidth - 1) * scaleX / 2.0f;
-    _centerZ = (heightMapHeight - 1) * scaleZ / 2.0f;
+    _centerX = ( heightMapWidth - 1 ) * scaleX / 2.0f;
+    _centerZ = ( heightMapHeight - 1 ) * scaleZ / 2.0f;
 
     // Generate vertices
-    for (int z = 0; z < heightMapHeight; ++z) {
-        for (int x = 0; x < heightMapWidth; ++x) {
-            float y = 0.0f; // Height will be computed in the vertex shader
+    for ( int z = 0; z < heightMapHeight; ++z )
+    {
+        for ( int x = 0; x < heightMapWidth; ++x )
+        {
+            float y    = 0.0f; // Height will be computed in the vertex shader
             float posX = x * scaleX - _centerX;
             float posZ = z * scaleZ - _centerZ;
-            terrainVertices.push_back(posX); // X
-            terrainVertices.push_back(y);     // Y
-            terrainVertices.push_back(posZ); // Z
+            terrainVertices.push_back( posX ); // X
+            terrainVertices.push_back( y );    // Y
+            terrainVertices.push_back( posZ ); // Z
 
             // Placeholder normal
-            terrainVertices.push_back(0.0f); // Normal X
-            terrainVertices.push_back(1.0f); // Normal Y
-            terrainVertices.push_back(0.0f); // Normal Z
+            terrainVertices.push_back( 0.0f ); // Normal X
+            terrainVertices.push_back( 1.0f ); // Normal Y
+            terrainVertices.push_back( 0.0f ); // Normal Z
 
             // Texture coordinates
-            float u = (float)x / (heightMapWidth - 1);
-            float v = (float)z / (heightMapHeight - 1);
-            terrainVertices.push_back(u);
-            terrainVertices.push_back(v);
+            float u = (float)x / ( heightMapWidth - 1 );
+            float v = (float)z / ( heightMapHeight - 1 );
+            terrainVertices.push_back( u );
+            terrainVertices.push_back( v );
         }
     }
 
     // Generate indices for triangles, excluding quads within the hole radius
-    for(int z = 0; z < heightMapHeight - 1; ++z){
-        for(int x = 0; x < heightMapWidth - 1; ++x){
+    for ( int z = 0; z < heightMapHeight - 1; ++z )
+    {
+        for ( int x = 0; x < heightMapWidth - 1; ++x )
+        {
             // Calculate positions for current quad
             float posX0 = x * scaleX - _centerX;
             float posZ0 = z * scaleZ - _centerZ;
-            float posX1 = (x + 1) * scaleX - _centerX;
-            float posZ1 = (z + 1) * scaleZ - _centerZ;
+            float posX1 = ( x + 1 ) * scaleX - _centerX;
+            float posZ1 = ( z + 1 ) * scaleZ - _centerZ;
 
             // Compute distance from center for the quad's center
-            float centerQuadX = (posX0 + posX1) / 2.0f;
-            float centerQuadZ = (posZ0 + posZ1) / 2.0f;
-            float distQuadCenter = sqrt(centerQuadX * centerQuadX + centerQuadZ * centerQuadZ);
+            float centerQuadX    = ( posX0 + posX1 ) / 2.0f;
+            float centerQuadZ    = ( posZ0 + posZ1 ) / 2.0f;
+            float distQuadCenter = sqrt( centerQuadX * centerQuadX + centerQuadZ * centerQuadZ );
 
             // Skip quads within the hole radius
-            if(distQuadCenter < 90.0){
+            if ( distQuadCenter < 90.0 )
+            {
                 continue; // Do not generate indices for this quad, creating a hole
             }
 
             // Generate indices for the quad
-            int topLeft = z * heightMapWidth + x;
-            int topRight = topLeft + 1;
-            int bottomLeft = (z + 1) * heightMapWidth + x;
+            int topLeft     = z * heightMapWidth + x;
+            int topRight    = topLeft + 1;
+            int bottomLeft  = ( z + 1 ) * heightMapWidth + x;
             int bottomRight = bottomLeft + 1;
 
             // First triangle
-            terrainIndices.push_back(topLeft);
-            terrainIndices.push_back(bottomLeft);
-            terrainIndices.push_back(topRight);
+            terrainIndices.push_back( topLeft );
+            terrainIndices.push_back( bottomLeft );
+            terrainIndices.push_back( topRight );
 
             // Second triangle
-            terrainIndices.push_back(topRight);
-            terrainIndices.push_back(bottomLeft);
-            terrainIndices.push_back(bottomRight);
+            terrainIndices.push_back( topRight );
+            terrainIndices.push_back( bottomLeft );
+            terrainIndices.push_back( bottomRight );
         }
     }
 
     // Calculate normals
-    calculateTerrainNormals();
+    calculateTerrainNormals( );
 
     // Create and upload buffers
-    glGenVertexArrays(1, &_terrainVAO);
-    glBindVertexArray(_terrainVAO);
+    glGenVertexArrays( 1, &_terrainVAO );
+    glBindVertexArray( _terrainVAO );
 
-    glGenBuffers(1, &_terrainVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, _terrainVBO);
-    glBufferData(GL_ARRAY_BUFFER, terrainVertices.size() * sizeof(float), terrainVertices.data(), GL_STATIC_DRAW);
+    glGenBuffers( 1, &_terrainVBO );
+    glBindBuffer( GL_ARRAY_BUFFER, _terrainVBO );
+    glBufferData( GL_ARRAY_BUFFER, terrainVertices.size( ) * sizeof( float ), terrainVertices.data( ), GL_STATIC_DRAW );
 
-    glGenBuffers(1, &_terrainIBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _terrainIBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, terrainIndices.size() * sizeof(unsigned int), terrainIndices.data(), GL_STATIC_DRAW);
+    glGenBuffers( 1, &_terrainIBO );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, _terrainIBO );
+    glBufferData( GL_ELEMENT_ARRAY_BUFFER, terrainIndices.size( ) * sizeof( unsigned int ), terrainIndices.data( ), GL_STATIC_DRAW );
 
     // Set attribute pointers while VAO is bound
-    const GLsizei stride = 8 * sizeof(float); // 3 pos + 3 normal + 2 texCoord
+    const GLsizei stride = 8 * sizeof( float ); // 3 pos + 3 normal + 2 texCoord
 
     // Position attribute
-    glEnableVertexAttribArray(_terrainShaderAttributeLocations.vPos);
-    glVertexAttribPointer(
-        _terrainShaderAttributeLocations.vPos,
-        3,              // size (x, y, z)
-        GL_FLOAT,       // type
-        GL_FALSE,       // normalized?
-        stride,         // stride
-        (void*)0        // array buffer offset
+    glEnableVertexAttribArray( _terrainShaderAttributeLocations.vPos );
+    glVertexAttribPointer( _terrainShaderAttributeLocations.vPos,
+                           3,        // size (x, y, z)
+                           GL_FLOAT, // type
+                           GL_FALSE, // normalized?
+                           stride,   // stride
+                           (void*)0  // array buffer offset
     );
 
     // Normal attribute
-    glEnableVertexAttribArray(_terrainShaderAttributeLocations.vNormal);
-    glVertexAttribPointer(
-        _terrainShaderAttributeLocations.vNormal,
-        3,              // size (nx, ny, nz)
-        GL_FLOAT,
-        GL_FALSE,
-        stride,
-        (void*)(3 * sizeof(float)) // Offset after positions (3 floats)
+    glEnableVertexAttribArray( _terrainShaderAttributeLocations.vNormal );
+    glVertexAttribPointer( _terrainShaderAttributeLocations.vNormal,
+                           3, // size (nx, ny, nz)
+                           GL_FLOAT,
+                           GL_FALSE,
+                           stride,
+                           (void*)( 3 * sizeof( float ) ) // Offset after positions (3 floats)
     );
 
     // Texture Coordinate attribute
-    glEnableVertexAttribArray(_terrainShaderAttributeLocations.vTexCoord);
-    glVertexAttribPointer(
-        _terrainShaderAttributeLocations.vTexCoord,
-        2,              // size (u, v)
-        GL_FLOAT,
-        GL_FALSE,
-        stride,
-        (void*)(6 * sizeof(float)) // Offset after positions and normals (6 floats)
+    glEnableVertexAttribArray( _terrainShaderAttributeLocations.vTexCoord );
+    glVertexAttribPointer( _terrainShaderAttributeLocations.vTexCoord,
+                           2, // size (u, v)
+                           GL_FLOAT,
+                           GL_FALSE,
+                           stride,
+                           (void*)( 6 * sizeof( float ) ) // Offset after positions and normals (6 floats)
     );
 
-    glBindVertexArray(0);
+    glBindVertexArray( 0 );
 }
 
-
-void FPEngine::calculateTerrainNormals() {
+void FPEngine::calculateTerrainNormals( )
+{
     // Initialize normals array
-    std::vector<glm::vec3> normals(heightMapWidth * heightMapHeight, glm::vec3(0.0f));
+    std::vector<glm::vec3> normals( heightMapWidth * heightMapHeight, glm::vec3( 0.0f ) );
 
     // Iterate over each triangle in the terrain
-    for (int z = 0; z < heightMapHeight - 1; ++z) {
-        for (int x = 0; x < heightMapWidth - 1; ++x) {
+    for ( int z = 0; z < heightMapHeight - 1; ++z )
+    {
+        for ( int x = 0; x < heightMapWidth - 1; ++x )
+        {
             // Define vertices of the two triangles in the grid cell
-            int topLeft = z * heightMapWidth + x;
-            int topRight = z * heightMapWidth + (x + 1);
-            int bottomLeft = (z + 1) * heightMapWidth + x;
-            int bottomRight = (z + 1) * heightMapWidth + (x + 1);
+            int topLeft     = z * heightMapWidth + x;
+            int topRight    = z * heightMapWidth + ( x + 1 );
+            int bottomLeft  = ( z + 1 ) * heightMapWidth + x;
+            int bottomRight = ( z + 1 ) * heightMapWidth + ( x + 1 );
 
             // First Triangle (topLeft, bottomLeft, topRight)
-            glm::vec3 v0 = glm::vec3(terrainVertices[topLeft * 8 + 0],
-                                     terrainVertices[topLeft * 8 + 1],
-                                     terrainVertices[topLeft * 8 + 2]);
-            glm::vec3 v1 = glm::vec3(terrainVertices[bottomLeft * 8 + 0],
-                                     terrainVertices[bottomLeft * 8 + 1],
-                                     terrainVertices[bottomLeft * 8 + 2]);
-            glm::vec3 v2 = glm::vec3(terrainVertices[topRight * 8 + 0],
-                                     terrainVertices[topRight * 8 + 1],
-                                     terrainVertices[topRight * 8 + 2]);
+            glm::vec3 v0 = glm::vec3( terrainVertices[topLeft * 8 + 0], terrainVertices[topLeft * 8 + 1], terrainVertices[topLeft * 8 + 2] );
+            glm::vec3 v1 = glm::vec3( terrainVertices[bottomLeft * 8 + 0], terrainVertices[bottomLeft * 8 + 1], terrainVertices[bottomLeft * 8 + 2] );
+            glm::vec3 v2 = glm::vec3( terrainVertices[topRight * 8 + 0], terrainVertices[topRight * 8 + 1], terrainVertices[topRight * 8 + 2] );
 
-            glm::vec3 edge1 = v1 - v0;
-            glm::vec3 edge2 = v2 - v0;
-            glm::vec3 faceNormal = glm::normalize(glm::cross(edge1, edge2));
+            glm::vec3 edge1      = v1 - v0;
+            glm::vec3 edge2      = v2 - v0;
+            glm::vec3 faceNormal = glm::normalize( glm::cross( edge1, edge2 ) );
 
             // Accumulate normals for each vertex
             normals[topLeft] += faceNormal;
@@ -905,13 +1179,11 @@ void FPEngine::calculateTerrainNormals() {
             normals[topRight] += faceNormal;
 
             // Second Triangle (bottomLeft, bottomRight, topRight)
-            glm::vec3 v3 = glm::vec3(terrainVertices[bottomRight * 8 + 0],
-                                     terrainVertices[bottomRight * 8 + 1],
-                                     terrainVertices[bottomRight * 8 + 2]);
+            glm::vec3 v3 = glm::vec3( terrainVertices[bottomRight * 8 + 0], terrainVertices[bottomRight * 8 + 1], terrainVertices[bottomRight * 8 + 2] );
 
-            glm::vec3 edge3 = v3 - v1;
-            glm::vec3 edge4 = v2 - v1;
-            glm::vec3 faceNormal2 = glm::normalize(glm::cross(edge3, edge4));
+            glm::vec3 edge3       = v3 - v1;
+            glm::vec3 edge4       = v2 - v1;
+            glm::vec3 faceNormal2 = glm::normalize( glm::cross( edge3, edge4 ) );
 
             // Accumulate normals for each vertex
             normals[bottomLeft] += faceNormal2;
@@ -921,8 +1193,9 @@ void FPEngine::calculateTerrainNormals() {
     }
 
     // Normalize the accumulated normals
-    for (int i = 0; i < normals.size(); ++i) {
-        normals[i] = glm::normalize(normals[i]);
+    for ( int i = 0; i < normals.size( ); ++i )
+    {
+        normals[i] = glm::normalize( normals[i] );
         // Corrected indexing: stride is 8 floats
         terrainVertices[i * 8 + 3] = normals[i].x;
         terrainVertices[i * 8 + 4] = normals[i].y;
@@ -930,37 +1203,38 @@ void FPEngine::calculateTerrainNormals() {
     }
 
     // Update VBO with new normals
-    glBindBuffer(GL_ARRAY_BUFFER, _terrainVBO);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, terrainVertices.size() * sizeof(float), terrainVertices.data());
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer( GL_ARRAY_BUFFER, _terrainVBO );
+    glBufferSubData( GL_ARRAY_BUFFER, 0, terrainVertices.size( ) * sizeof( float ), terrainVertices.data( ) );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
 }
 
-void FPEngine::_moveSpotlight() {
-    glm::vec3 spotLightPosition = _pPlayerCar->getPosition() + (_pPlayerCar->getForwardDirection()*5.0f); // Spotlight above the Being
-    glm::vec3 spotLightDirection = _pPlayerCar->getForwardDirection();
+void FPEngine::_moveSpotlight( )
+{
+    glm::vec3 spotLightPosition  = _pPlayerCar->getPosition( ) + ( _pPlayerCar->getForwardDirection( ) * 5.0f ); // Spotlight above the Being
+    glm::vec3 spotLightDirection = _pPlayerCar->getForwardDirection( );
 
     glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.spotLightPosition, 1, glm::value_ptr( spotLightPosition ) );
     glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.spotLightDirection, 1, glm::value_ptr( spotLightDirection ) );
 
-    glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.spotLightPosition, 1, glm::value_ptr(spotLightPosition));
-    glProgramUniform3fv(_terrainShaderProgram->getShaderProgramHandle(), _terrainShaderUniformLocations.spotLightDirection, 1, glm::value_ptr(spotLightDirection));
-
+    glProgramUniform3fv( _terrainShaderProgram->getShaderProgramHandle( ), _terrainShaderUniformLocations.spotLightPosition, 1, glm::value_ptr( spotLightPosition ) );
+    glProgramUniform3fv( _terrainShaderProgram->getShaderProgramHandle( ), _terrainShaderUniformLocations.spotLightDirection, 1, glm::value_ptr( spotLightDirection ) );
 }
 
-void FPEngine::run() {
-    printf("\nControls:\n");
-    printf("\tW A S D - forwards, backwards, and side to side for the character in the world\n");
-    printf("\tMouse Drag - Pan camera side to side and up and down\n");
-    printf("\tMouse Drag up and down + shift - Zoom camera in and out\n");
-    printf("\tQ / ESC - quit\n");
-
+void FPEngine::run( )
+{
+    printf( "\nControls:\n" );
+    printf( "\tW A S D - forwards, backwards, and side to side for the character in the world\n" );
+    printf( "\tMouse Drag - Pan camera side to side and up and down\n" );
+    printf( "\tMouse Drag up and down + shift - Zoom camera in and out\n" );
+    printf( "\tQ / ESC - quit\n" );
 
     //  This is our draw loop - all rendering is done here.  We use a loop to keep the window open
     //	until the user decides to close the window and quit the program.  Without a loop, the
     //	window will display once and then the program exits.
-    while( !glfwWindowShouldClose(mpWindow) ) {	// check if the window was instructed to be closed
-        glDrawBuffer( GL_BACK );				// work with our back frame buffer
-        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );	// clear the current color contents and depth buffer in the window
+    while ( !glfwWindowShouldClose( mpWindow ) )
+    {                                                         // check if the window was instructed to be closed
+        glDrawBuffer( GL_BACK );                              // work with our back frame buffer
+        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ); // clear the current color contents and depth buffer in the window
 
         // Get the size of our framebuffer.  Ideally this should be the same dimensions as our window, but
         // when using a Retina display the actual window can be larger than the requested window.  Therefore,
@@ -978,183 +1252,174 @@ void FPEngine::run() {
         // set up our look at matrix to position our camera
         // multiply by the look at matrix - this is the same as our view matrix
 
-        _renderScene(_cams[camID]->getViewMatrix(), _cams[camID]->getProjectionMatrix());					// draw everything to the window
-        _updateScene();
-        glfwSwapBuffers(mpWindow);       // flush the OpenGL commands and make sure they get rendered!
-        glfwPollEvents();				// check for any events and signal to redraw screen
+        _renderScene( _cams[camID]->getViewMatrix( ), _cams[camID]->getProjectionMatrix( ) ); // draw everything to the window
+        _updateScene( );
+        glfwSwapBuffers( mpWindow ); // flush the OpenGL commands and make sure they get rendered!
+        glfwPollEvents( );           // check for any events and signal to redraw screen
     }
 }
+
 void FPEngine::_createSkyboxBuffers( )
 {
-  struct SkyboxVertex
-  {
-      glm::vec3 position;
-      glm::vec2 texCoords;
-  };
+    struct SkyboxVertex
+    {
+            glm::vec3 position;
+            glm::vec2 texCoords;
+    };
 
-  const float texWidth  = 1.0f / 4.0f;
-  const float texHeight = 1.0f / 3.0f;
+    const float texWidth  = 1.0f / 4.0f;
+    const float texHeight = 1.0f / 3.0f;
 
-  std::vector<SkyboxVertex> vertices = {
-    // Right face (+X)
-    {  glm::vec3( 1, -1, -1 ), glm::vec2( 2 * texWidth,     texHeight ) }, // Bottom-left
-    {  glm::vec3( 1, -1,  1 ), glm::vec2( 3 * texWidth,     texHeight ) }, // Bottom-right
-    {  glm::vec3( 1,  1,  1 ), glm::vec2( 3 * texWidth, 2 * texHeight ) }, // Top-right
-    {  glm::vec3( 1,  1, -1 ), glm::vec2( 2 * texWidth, 2 * texHeight ) }, // Top-left
+    std::vector<SkyboxVertex> vertices = {
+        // Right face (+X)
+        {  glm::vec3( 1, -1, -1 ), glm::vec2( 2 * texWidth,     texHeight ) }, // Bottom-left
+        {  glm::vec3( 1, -1,  1 ), glm::vec2( 3 * texWidth,     texHeight ) }, // Bottom-right
+        {  glm::vec3( 1,  1,  1 ), glm::vec2( 3 * texWidth, 2 * texHeight ) }, // Top-right
+        {  glm::vec3( 1,  1, -1 ), glm::vec2( 2 * texWidth, 2 * texHeight ) }, // Top-left
 
-    // Left face (-X)
-    { glm::vec3( -1, -1,  1 ), glm::vec2( 0 * texWidth,     texHeight ) }, // Bottom-left
-    { glm::vec3( -1, -1, -1 ), glm::vec2( 1 * texWidth,     texHeight ) }, // Bottom-right
-    { glm::vec3( -1,  1, -1 ), glm::vec2( 1 * texWidth, 2 * texHeight ) }, // Top-right
-    { glm::vec3( -1,  1,  1 ), glm::vec2( 0 * texWidth, 2 * texHeight ) }, // Top-left
+        // Left face (-X)
+        { glm::vec3( -1, -1,  1 ), glm::vec2( 0 * texWidth,     texHeight ) }, // Bottom-left
+        { glm::vec3( -1, -1, -1 ), glm::vec2( 1 * texWidth,     texHeight ) }, // Bottom-right
+        { glm::vec3( -1,  1, -1 ), glm::vec2( 1 * texWidth, 2 * texHeight ) }, // Top-right
+        { glm::vec3( -1,  1,  1 ), glm::vec2( 0 * texWidth, 2 * texHeight ) }, // Top-left
 
-    // Top face (+Y)
-    { glm::vec3( -1,  1, -1 ), glm::vec2( 1 * texWidth, 2 * texHeight ) }, // Bottom-left
-    {  glm::vec3( 1,  1, -1 ), glm::vec2( 2 * texWidth, 2 * texHeight ) }, // Bottom-right
-    {  glm::vec3( 1,  1,  1 ), glm::vec2( 2 * texWidth, 3 * texHeight ) }, // Top-right
-    { glm::vec3( -1,  1,  1 ), glm::vec2( 1 * texWidth, 3 * texHeight ) }, // Top-left
+        // Top face (+Y)
+        { glm::vec3( -1,  1, -1 ), glm::vec2( 1 * texWidth, 2 * texHeight ) }, // Bottom-left
+        {  glm::vec3( 1,  1, -1 ), glm::vec2( 2 * texWidth, 2 * texHeight ) }, // Bottom-right
+        {  glm::vec3( 1,  1,  1 ), glm::vec2( 2 * texWidth, 3 * texHeight ) }, // Top-right
+        { glm::vec3( -1,  1,  1 ), glm::vec2( 1 * texWidth, 3 * texHeight ) }, // Top-left
 
-    // Bottom face (-Y)
-    { glm::vec3( -1, -1,  1 ), glm::vec2( 1 * texWidth, 0 * texHeight ) }, // Bottom-left
-    {  glm::vec3( 1, -1,  1 ), glm::vec2( 2 * texWidth, 0 * texHeight ) }, // Bottom-right
-    {  glm::vec3( 1, -1, -1 ), glm::vec2( 2 * texWidth, 1 * texHeight ) }, // Top-right
-    { glm::vec3( -1, -1, -1 ), glm::vec2( 1 * texWidth, 1 * texHeight ) }, // Top-left
+        // Bottom face (-Y)
+        { glm::vec3( -1, -1,  1 ), glm::vec2( 1 * texWidth, 0 * texHeight ) }, // Bottom-left
+        {  glm::vec3( 1, -1,  1 ), glm::vec2( 2 * texWidth, 0 * texHeight ) }, // Bottom-right
+        {  glm::vec3( 1, -1, -1 ), glm::vec2( 2 * texWidth, 1 * texHeight ) }, // Top-right
+        { glm::vec3( -1, -1, -1 ), glm::vec2( 1 * texWidth, 1 * texHeight ) }, // Top-left
 
-    // Front face (+Z)
-    { glm::vec3( -1, -1, -1 ), glm::vec2( 1 * texWidth,     texHeight ) }, // Bottom-left
-    {  glm::vec3( 1, -1, -1 ), glm::vec2( 2 * texWidth,     texHeight ) }, // Bottom-right
-    {  glm::vec3( 1,  1, -1 ), glm::vec2( 2 * texWidth, 2 * texHeight ) }, // Top-right
-    { glm::vec3( -1,  1, -1 ), glm::vec2( 1 * texWidth, 2 * texHeight ) }, // Top-left
+        // Front face (+Z)
+        { glm::vec3( -1, -1, -1 ), glm::vec2( 1 * texWidth,     texHeight ) }, // Bottom-left
+        {  glm::vec3( 1, -1, -1 ), glm::vec2( 2 * texWidth,     texHeight ) }, // Bottom-right
+        {  glm::vec3( 1,  1, -1 ), glm::vec2( 2 * texWidth, 2 * texHeight ) }, // Top-right
+        { glm::vec3( -1,  1, -1 ), glm::vec2( 1 * texWidth, 2 * texHeight ) }, // Top-left
 
-    // Back face (-Z)
-    {  glm::vec3( 1, -1,  1 ), glm::vec2( 3 * texWidth,     texHeight ) }, // Bottom-left
-    { glm::vec3( -1, -1,  1 ), glm::vec2( 4 * texWidth,     texHeight ) }, // Bottom-right
-    { glm::vec3( -1,  1,  1 ), glm::vec2( 4 * texWidth, 2 * texHeight ) }, // Top-right
-    {  glm::vec3( 1,  1,  1 ), glm::vec2( 3 * texWidth, 2 * texHeight ) }, // Top-left
-  };
+        // Back face (-Z)
+        {  glm::vec3( 1, -1,  1 ), glm::vec2( 3 * texWidth,     texHeight ) }, // Bottom-left
+        { glm::vec3( -1, -1,  1 ), glm::vec2( 4 * texWidth,     texHeight ) }, // Bottom-right
+        { glm::vec3( -1,  1,  1 ), glm::vec2( 4 * texWidth, 2 * texHeight ) }, // Top-right
+        {  glm::vec3( 1,  1,  1 ), glm::vec2( 3 * texWidth, 2 * texHeight ) }, // Top-left
+    };
 
-  // Indices for drawing the cube with GL_TRIANGLES
-  std::vector<GLuint> indices = {
-    // Right face
-    0,
-    1,
-    2,
-    2,
-    3,
-    0,
+    // Indices for drawing the cube with GL_TRIANGLES
+    std::vector<GLuint> indices = {
+        // Right face
+        0,
+        1,
+        2,
+        2,
+        3,
+        0,
 
-    // Left face
-    4,
-    5,
-    6,
-    6,
-    7,
-    4,
+        // Left face
+        4,
+        5,
+        6,
+        6,
+        7,
+        4,
 
-    // Top face
-    8,
-    9,
-    10,
-    10,
-    11,
-    8,
+        // Top face
+        8,
+        9,
+        10,
+        10,
+        11,
+        8,
 
-    // Bottom face
-    12,
-    13,
-    14,
-    14,
-    15,
-    12,
+        // Bottom face
+        12,
+        13,
+        14,
+        14,
+        15,
+        12,
 
-    // Front face
-    16,
-    17,
-    18,
-    18,
-    19,
-    16,
+        // Front face
+        16,
+        17,
+        18,
+        18,
+        19,
+        16,
 
-    // Back face
-    20,
-    21,
-    22,
-    22,
-    23,
-    20,
-  };
+        // Back face
+        20,
+        21,
+        22,
+        22,
+        23,
+        20,
+    };
 
-  // Create VAO and VBO
-  glGenVertexArrays( 1, &_skyboxVAO );
-  glGenBuffers( 1, &_skyboxVBO );
-  GLuint skyboxEBO;
-  glGenBuffers( 1, &skyboxEBO );
+    // Create VAO and VBO
+    glGenVertexArrays( 1, &_skyboxVAO );
+    glGenBuffers( 1, &_skyboxVBO );
+    GLuint skyboxEBO;
+    glGenBuffers( 1, &skyboxEBO );
 
-  glBindVertexArray( _skyboxVAO );
+    glBindVertexArray( _skyboxVAO );
 
-  glBindBuffer( GL_ARRAY_BUFFER, _skyboxVBO );
-  glBufferData( GL_ARRAY_BUFFER, vertices.size( ) * sizeof( SkyboxVertex ), &vertices[0], GL_STATIC_DRAW );
+    glBindBuffer( GL_ARRAY_BUFFER, _skyboxVBO );
+    glBufferData( GL_ARRAY_BUFFER, vertices.size( ) * sizeof( SkyboxVertex ), &vertices[0], GL_STATIC_DRAW );
 
-  glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, skyboxEBO );
-  glBufferData( GL_ELEMENT_ARRAY_BUFFER, indices.size( ) * sizeof( GLuint ), &indices[0], GL_STATIC_DRAW );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, skyboxEBO );
+    glBufferData( GL_ELEMENT_ARRAY_BUFFER, indices.size( ) * sizeof( GLuint ), &indices[0], GL_STATIC_DRAW );
 
-  // Position attribute
-  glEnableVertexAttribArray( 0 ); // Corresponds to location 0 in shader
-  glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, sizeof( SkyboxVertex ), (void*)0 );
+    // Position attribute
+    glEnableVertexAttribArray( 0 ); // Corresponds to location 0 in shader
+    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, sizeof( SkyboxVertex ), (void*)0 );
 
-  // Texture coordinate attribute
-  glEnableVertexAttribArray( 1 ); // Corresponds to location 1 in shader
-  glVertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, sizeof( SkyboxVertex ), (void*)offsetof( SkyboxVertex, texCoords ) );
+    // Texture coordinate attribute
+    glEnableVertexAttribArray( 1 ); // Corresponds to location 1 in shader
+    glVertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, sizeof( SkyboxVertex ), (void*)offsetof( SkyboxVertex, texCoords ) );
 
-  glBindVertexArray( 0 );
+    glBindVertexArray( 0 );
 }
 
-glm::vec3 FPEngine::evaluateBezier( float t, const glm::vec3 &p0, const glm::vec3 &p1, const glm::vec3 &p2, const glm::vec3 &p3 ) {
-    float u = 1.0f - t;
-    float tt = t * t;
-    float uu = u * u;
+glm::vec3 FPEngine::evaluateBezier( float t, const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3 )
+{
+    float u   = 1.0f - t;
+    float tt  = t * t;
+    float uu  = u * u;
     float uuu = uu * u;
     float ttt = tt * t;
 
     // Cubic Bezier formula: B(t) = uuu * p0 + 3uu t p1 + 3u tt p2 + ttt p3
-    glm::vec3 point = uuu * p0; // u^3 * p0
+    glm::vec3 point = uuu * p0;  // u^3 * p0
     point += 3.0f * uu * t * p1; // 3 * u^2 * t * p1
     point += 3.0f * u * tt * p2; // 3 * u * t^2 * p2
-    point += ttt * p3; // t^3 * p3
+    point += ttt * p3;           // t^3 * p3
 
     return point;
 }
 
-void FPEngine::_computeAndSendTransformationMatrices( CSCI441::ShaderProgram* shaderProgram,
-                                                         glm::mat4 modelMatrix,
-                                                         glm::mat4 viewMatrix,
-                                                         glm::mat4 projectionMatrix,
-                                                         GLint mvpMtxLocation,
-                                                         GLint normalMtxLocation )
+glm::vec3 FPEngine::_convertToWorldCoords( int px, int pz )
 {
-    // ensure our shader program is not null
-    if ( shaderProgram )
-    {
-        // precompute the MVP matrix CPU side
-        glm::mat4 mvpMatrix = projectionMatrix * viewMatrix * modelMatrix;
-        // precompute the Normal matrix CPU side
-        glm::mat3 normalMatrix = glm::mat3( glm::transpose( glm::inverse( modelMatrix ) ) );
-
-        // send the matrices to the shader
-        shaderProgram->setProgramUniform( mvpMtxLocation, mvpMatrix );
-        shaderProgram->setProgramUniform( normalMtxLocation, normalMatrix );
-    }
+    float x = px - _trackCenter.x;
+    float z = pz - _trackCenter.z;
+    float y = getTerrainHeight( x, z );
+    return glm::vec3( x, y, z );
 }
 
-float FPEngine::arcLengthToT(float s, const std::vector<float>& arcLengths, const std::vector<float>& sampleTs) {
+float FPEngine::arcLengthToT( float s, const std::vector<float>& arcLengths, const std::vector<float>& sampleTs )
+{
     // s should be in range [0, arcLengths.back()]
     // Binary search for the arc length interval
-    int low = 0;
-    int high = (int)arcLengths.size() - 1;
+    int low  = 0;
+    int high = (int)arcLengths.size( ) - 1;
 
-    while(low <= high) {
-        int mid = (low + high) / 2;
-        if (arcLengths[mid] < s)
+    while ( low <= high )
+    {
+        int mid = ( low + high ) / 2;
+        if ( arcLengths[mid] < s )
             low = mid + 1;
         else
             high = mid - 1;
@@ -1162,38 +1427,43 @@ float FPEngine::arcLengthToT(float s, const std::vector<float>& arcLengths, cons
 
     // After this, low is the index of the first arc length >= s
     // Interpolate between low-1 and low
-    if (low == 0) return 0.0f;
-    if (low == (int)arcLengths.size()) return 1.0f;
+    if ( low == 0 )
+        return 0.0f;
+    if ( low == (int)arcLengths.size( ) )
+        return 1.0f;
 
-    float s0 = arcLengths[low-1];
+    float s0 = arcLengths[low - 1];
     float s1 = arcLengths[low];
-    float t0 = sampleTs[low-1];
+    float t0 = sampleTs[low - 1];
     float t1 = sampleTs[low];
 
-    float ratio = (s - s0) / (s1 - s0);
-    return t0 + ratio * (t1 - t0);
+    float ratio = ( s - s0 ) / ( s1 - s0 );
+    return t0 + ratio * ( t1 - t0 );
 }
 
 //*************************************************************************************
 //
 // Callbacks
 
-void lab02_engine_keyboard_callback(GLFWwindow *window, int key, int scancode, int action, int mods ) {
-    auto engine = (FPEngine*) glfwGetWindowUserPointer(window);
+void lab02_engine_keyboard_callback( GLFWwindow* window, int key, int scancode, int action, int mods )
+{
+    auto engine = (FPEngine*)glfwGetWindowUserPointer( window );
     // pass the key and action through to the engine
-    engine->handleKeyEvent(key, action);
+    engine->handleKeyEvent( key, action );
 }
 
-void lab02_engine_cursor_callback(GLFWwindow *window, double x, double y ) {
-    auto engine = (FPEngine*) glfwGetWindowUserPointer(window);
+void lab02_engine_cursor_callback( GLFWwindow* window, double x, double y )
+{
+    auto engine = (FPEngine*)glfwGetWindowUserPointer( window );
 
     // pass the cursor position through to the engine
-    engine->handleCursorPositionEvent(glm::vec2(x, y));
+    engine->handleCursorPositionEvent( glm::vec2( x, y ) );
 }
 
-void lab02_engine_mouse_button_callback(GLFWwindow *window, int button, int action, int mods ) {
-    auto engine = (FPEngine*) glfwGetWindowUserPointer(window);
+void lab02_engine_mouse_button_callback( GLFWwindow* window, int button, int action, int mods )
+{
+    auto engine = (FPEngine*)glfwGetWindowUserPointer( window );
 
     // pass the mouse button and action through to the engine
-    engine->handleMouseButtonEvent(button, action);
+    engine->handleMouseButtonEvent( button, action );
 }

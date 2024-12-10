@@ -37,6 +37,9 @@ glm::vec3 Car::getPosition( ) { return _position; }
 void Car::setPosition( glm::vec3 position ) { _position = position; }
 glm::vec3 Car::getForwardDirection( ) { return _forwardDirection; }
 void Car::setForwardDirection( ) { _forwardDirection = glm::vec3( cos( toRotate ), 0.0f, -sin( toRotate ) ); }
+void Car::setForwardDirection(const glm::vec3& direction) {
+    _forwardDirection = glm::normalize(direction);
+}
 void Car::rotateSelf(GLfloat rotationFactor) {
     toRotate += rotationFactor;
 }
@@ -62,9 +65,6 @@ bool Car::isFalling() const {
 
 void Car::draw(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
     modelMtx = glm::rotate(modelMtx, float(toRotate-M_PI/2), glm::vec3(0.0f, 1.0f, 0.0f));
-
-    //modelMtx = glm::rotate( modelMtx, -_rotateAngle, CSCI441::Y_AXIS );
-    //modelMtx = glm::rotate( modelMtx, _rotateAngle, CSCI441::Z_AXIS );
 
     _drawBody(modelMtx, viewMtx, projMtx);
     _drawWheels(modelMtx, viewMtx, projMtx);

@@ -18,8 +18,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 
 #ifndef M_PI
     #define M_PI 3.14159265f
@@ -81,7 +79,7 @@ class FPEngine final : public CSCI441::OpenGLEngine
 
         std::vector<float> heightData;
         int heightMapWidth{}, heightMapHeight{}, heightMapChannels{};
-        float maxHeight = 10.0f; // Adjust as needed
+        float maxHeight = 10.0f;
 
         bool loadHeightMap( const std::string& filepath );
 
@@ -207,6 +205,8 @@ class FPEngine final : public CSCI441::OpenGLEngine
         CSCI441::ShaderProgram* _lightingShaderProgram = nullptr;
         Car* _pPlayerCar{};
 
+        Car* _pAICar;
+
         // Camera Information
         CSCI441::Camera** _cams;
 
@@ -220,11 +220,13 @@ class FPEngine final : public CSCI441::OpenGLEngine
             FIXED_CAM = 1,
         };
 
-        struct SpeedLineShaderUniformLocations
-        {
+        struct SpeedLineShaderUniformLocations {
                 GLint mvpMatrix;
-                GLint cartSpeed;
+                GLint modelMatrix;
+                GLint cartPosition;
+                GLint cartDirection;
                 GLint materialColor;
+                GLint cartSpeed;
         } _speedLineUniformLocations{};
 
         CSCI441::ShaderProgram* _speedLineShaderProgram = nullptr;
@@ -283,18 +285,23 @@ class FPEngine final : public CSCI441::OpenGLEngine
                 GLfloat currentEvaluationParameter = 0.0f; // New data member added
         } _bezierCurve;
 
-        // TODO: Initialize these in cpp file
+        glm::vec3 _p0, _p1, _p2, _p3, _p4, _p5, _p6, _p7, _p8, _p9, _p10, _p11, _p12;
 
         // Bezier points
-        glm::vec3 _p0 = glm::vec3( -50.0f, 0.0f, -50.0f );
-        glm::vec3 _p1 = glm::vec3( -25.0f, 0.0f, 0.0f );
-        glm::vec3 _p2 = glm::vec3( 25.0f, 0.0f, 0.0f );
-        glm::vec3 _p3 = glm::vec3( 50.0f, 0.0f, 50.0f );
+        std::vector<glm::vec3> _circleControlPoints;
+
+        glm::vec3 _trackCenter = glm::vec3(339, 0, 326);
+
+        int numCurves = 4;
+        int _curvePointCount;
+
+        GLuint _curveVAO;
+        GLuint _curveVBO;
+
+        double k = 0.5522847498;
 
         // A parameter t that moves along the curve from 0 to 1
         float _bezierT = 0.0f;
-        // Speed at which we advance along the curve
-        float _bezierSpeed = 0.01f;
 
         std::vector<float> _arcLengths;
         std::vector<float> _sampleTs;
@@ -304,21 +311,26 @@ class FPEngine final : public CSCI441::OpenGLEngine
         double _lastTime{};
 
         // Carts
-        GLuint _aiCartVAO{};
-
         glm::vec3 _aiCartPosition{};
-        float _aiCartSpeed{};
+        glm::vec3 _aiCartDirection;
 
         glm::vec3 _playerCartPosition{};
 
-        double _speedThreshold = 5.0;
+        float _startT;
+        glm::vec3 _startPosition{};
 
-        static void _computeAndSendTransformationMatrices( CSCI441::ShaderProgram* shaderProgram,
-                                                    glm::mat4 modelMatrix,
-                                                    glm::mat4 viewMatrix,
-                                                    glm::mat4 projectionMatrix,
-                                                    GLint mvpMtxLocation,
-                                                    GLint normalMtxLocation ) ;
+        float _playerSpeed = 0.0f;
+        float _playerAcceleration = 0.1f;
+        float _playerMaxSpeed = 0.8f;
+
+        float _aiSpeed = 0.0f;
+        float _aiAcceleration = 0.5f;
+        float _aiMaxSpeed = 5.0f;
+
+        float _speedThreshold = 0.7f;
+        float _speedThresholdAI = 3.0f;
+
+        glm::vec3 _convertToWorldCoords(int px, int pz);
 };
 
 void lab02_engine_keyboard_callback( GLFWwindow* window, int key, int scancode, int action, int mods );

@@ -1,19 +1,16 @@
 #version 410 core
 
-// Input vertex attribute from the VAO
 layout (location = 0) in vec3 vPos;
-// If you want normals or other attributes, declare them similarly
-// layout (location = 1) in vec3 vNorm; // if needed
 
-// Uniforms passed from CPU
 uniform mat4 mvpMatrix;
+uniform mat4 modelMatrix;
 
-// For direction of motion dependent pattern
-out vec3 fragNormal;
+out vec3 fragWorldPos;
 
 void main() {
-    // Compute the clip space position of the vertex
-    gl_Position = mvpMatrix * vec4(vPos, 1.0);
+    // Compute world position of this vertex
+    vec4 worldPos = modelMatrix * vec4(vPos, 1.0);
+    fragWorldPos = worldPos.xyz;
 
-    fragNormal = (normalMatrix * vec4(vNorm,0.0)).xyz;
+    gl_Position = mvpMatrix * vec4(vPos, 1.0);
 }

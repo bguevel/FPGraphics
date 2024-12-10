@@ -1,37 +1,36 @@
 #version 410 core
 
-in vec3 fragNormal;
+in vec3 fragWorldPos;
 
 uniform float cartSpeed;
 uniform vec3 materialColor;
+uniform vec3 cartPosition;
+uniform vec3 cartDirection;
 
 out vec4 fragColor;
 
 void main() {
     vec4 baseColor = vec4(materialColor, 1.0);
-
-    float speedThreshold = 2.0; // adjust as needed
-
-    // Normalize the fragment normal
-    vec3 N = normalize(fragNormal);
-
-    // Use fragNormal to rotate the line pattern.
-
-    float angle = atan(N.y, N.x);
-
-    // Rotate our coordinate system by this angle.
-
-    float rotatedX = gl_FragCoord.x * cos(angle) - gl_FragCoord.y * sin(angle);
-    // Now rotatedX is shifted according to the normal direction, which can change line orientation
+    float speedThreshold = 3.0; // adjust as needed
 
     if (cartSpeed > speedThreshold) {
-        // Create a line pattern using the rotated coordinate
-        float frequency = 0.1; // how dense the lines are
-        float linePattern = fract(rotatedX * frequency);
-        float mask = step(0.5, linePattern);
+        // Compute the vector from the cart to this fragment
+        vec3 toFrag = fragWorldPos - cartPosition;
 
-        // blend white stripes
+        // Project this onto the cartDirection to get a distance along direction
+        float distAlongDir = dot(toFrag, normalize(cartDirection));
+
+        // frequency of lines
+        float frequency = 0.5; // adjust for spacing of lines
+        // create a repeating pattern along direction axis
+        float linePattern = fract(distAlongDir * frequency);
+
+        // Use step to create stripes
+        float mask = step(0.5, linePattern);
         vec4 lineColor = vec4(1.0, 1.0, 1.0, 1.0);
+
+        // Mix the base color with lineColor based on mask
+        // This creates stripes along the cart's direction
         baseColor = mix(baseColor, lineColor, mask * 0.3);
     }
 
