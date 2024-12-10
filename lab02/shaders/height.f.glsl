@@ -76,7 +76,7 @@ void main() {
 
     // Compute distance for attenuation
     float distance = length(spotLightPosition - fragPosition);
-    float attenuation = 1.0 / (1.0 + 0.00009 * distance + 0.000032 * distance * distance);
+    float attenuation = 1.0 / (1.0 + 0.009 * distance + 0.0032 * distance * distance);
 
     // Final spotlight intensity
     float spotIntensity = intensity * attenuation;

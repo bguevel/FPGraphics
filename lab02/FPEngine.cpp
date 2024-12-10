@@ -175,9 +175,9 @@ void FPEngine::mSetupScene() {
     //******************************************************************
     glm::vec3 playerPosition = _pPlayerCar->getPosition();
     glm::vec3 spotLightPosition = glm::vec3(-110.0f,30.0f,-110.0f); // Spotlight above the Being
-    glm::vec3 spotLightDirection = glm::vec3(0.0f,-1.0f,0.0f);
-    GLfloat spotLightCutoff      = glm::cos( glm::radians( 40.0f ) );
-    GLfloat spotLightOuterCutoff = glm::cos( glm::radians( 70.0f ) );
+    glm::vec3 spotLightDirection = glm::vec3(1.0f,0.0f,0.0f);
+    GLfloat spotLightCutoff      = glm::cos( glm::radians( 90.0f ) );
+    GLfloat spotLightOuterCutoff = glm::cos( glm::radians( 120.0f ) );
 
     glProgramUniform3fv( _lightingShaderProgram->getShaderProgramHandle( ), _lightingShaderUniformLocations.spotLightPosition, 1, glm::value_ptr( spotLightPosition ) );
 
@@ -869,7 +869,8 @@ void FPEngine::_createGroundBuffers() {
 
             // Skip quads within the hole radius
             if(distQuadCenter < 90.0){
-                continue; // Do not generate indices for this quad, creating a hole
+                // this generates holes I am commenting out the continue for no hole generation
+                //continue; // Do not generate indices for this quad, creating a hole
             }
 
             // Generate indices for the quad
