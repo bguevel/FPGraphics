@@ -39,6 +39,7 @@ glm::vec3 Car::getForwardDirection( ) { return _forwardDirection; }
 void Car::setForwardDirection( ) { _forwardDirection = glm::vec3( cos( toRotate ), 0.0f, -sin( toRotate ) ); }
 void Car::setForwardDirection(const glm::vec3& direction) {
     _forwardDirection = glm::normalize(direction);
+    toRotate = acos(_forwardDirection.x) * (_forwardDirection.z >= 0 ? -1.0f : 1.0f);
 }
 void Car::rotateSelf(GLfloat rotationFactor) {
     toRotate += rotationFactor;

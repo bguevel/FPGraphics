@@ -269,8 +269,8 @@ void FPEngine::mSetupScene( )
     // Set forward direction of carts
     glm::vec3 nextPos   = evaluateBezier( _startT + 0.001f, _p0, _p1, _p2, _p3 );
     glm::vec3 direction = glm::normalize( nextPos - _startPosition );
-
-    _pPlayerCar->setForwardDirection( direction );
+    fprintf(stdout, "Player Car Direction, (X: %f)\n", direction.x);
+    _pPlayerCar->setForwardDirection( glm::vec3(1.0f,0.0f,0.0f));
 
     _cams[CAM_ID::ARC_CAM] = new CSCI441::ArcballCam( );
     _cams[CAM_ID::ARC_CAM]->setLookAtPoint( _pPlayerCar->getPosition( ) );
@@ -698,6 +698,10 @@ void FPEngine::_renderScene( glm::mat4 viewMtx, glm::mat4 projMtx ) const
     // 2. Draw Car with Lighting Shader
     _lightingShaderProgram->useProgram( );
 
+    for (Tree curTree: _trees) {
+        curTree.draw(viewMtx, projMtx);
+    }
+
     // Compute and send matrix uniforms for lighting shader
     glm::mat4 modelMtxCar = glm::mat4( 1.0f );
 
@@ -706,6 +710,34 @@ void FPEngine::_renderScene( glm::mat4 viewMtx, glm::mat4 projMtx ) const
 
     // Draw the car
     _pPlayerCar->draw( modelMtxCar, viewMtx, projMtx );
+
+    // Compute transformations for the AI cart
+    glm::mat4 modelMtxAICar = glm::mat4( 1.0f );
+    /*
+    // Create a rotation matrix so the cart faces `direction`
+    glm::vec3 up( 0.0f, 1.0f, 0.0f );
+    glm::vec3 right      = glm::normalize( glm::cross( up, _aiCartDirection ) );
+    glm::vec3 adjustedUp = glm::cross( _aiCartDirection, right );
+*/
+    glm::vec3 _aiCartDirection2 = glm::vec3(_aiCartDirection.x, 0, _aiCartDirection.z);
+
+    fprintf(stdout, "AI X: %f Y: %f Z: %f\n", glm::normalize(_aiCartDirection2).x, glm::normalize(_aiCartDirection2).y,glm::normalize(_aiCartDirection2).z);
+    _pAICar->setForwardDirection(glm::normalize(_aiCartDirection2));
+/*
+    glm::mat4 orientation( 1.0f );
+    orientation[0] = glm::vec4( right, 0.0f );
+    orientation[1] = glm::vec4( adjustedUp, 0.0f );
+    orientation[2] = glm::vec4( -_aiCartDirection, 0.0f );
+*/
+    // Combine orientation with the model matrix for drawing
+    modelMtxAICar = glm::translate( glm::mat4( 1.0f ), _aiCartPosition ) * glm::scale( glm::mat4( 1.0f ), glm::vec3( 1.0f ) );
+
+    _computeAndSendMatrixUniforms( modelMtxAICar, viewMtx, projMtx );
+
+    // Set a distinct color for the AI cart TODO: Identify what color we want the ai cart to be
+    // _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.materialColor, glm::vec3(1.0f, 0.0f, 0.0f));
+
+    _pAICar->draw( modelMtxAICar, viewMtx, projMtx );
 
     float currentPlayerSpeed = _playerSpeed;
 
@@ -739,32 +771,6 @@ void FPEngine::_renderScene( glm::mat4 viewMtx, glm::mat4 projMtx ) const
         glDisable( GL_BLEND );
     }
 
-    for (Tree curTree: _trees) {
-        curTree.draw(viewMtx, projMtx);
-    }
-
-    // Compute transformations for the AI cart
-    glm::mat4 modelMtxAICar = glm::mat4( 1.0f );
-
-    // Create a rotation matrix so the cart faces `direction`
-    glm::vec3 up( 0.0f, 1.0f, 0.0f );
-    glm::vec3 right      = glm::normalize( glm::cross( up, _aiCartDirection ) );
-    glm::vec3 adjustedUp = glm::cross( _aiCartDirection, right );
-
-    glm::mat4 orientation( 1.0f );
-    orientation[0] = glm::vec4( right, 0.0f );
-    orientation[1] = glm::vec4( adjustedUp, 0.0f );
-    orientation[2] = glm::vec4( -_aiCartDirection, 0.0f );
-
-    // Combine orientation with the model matrix for drawing
-    modelMtxAICar = glm::translate( glm::mat4( 1.0f ), _aiCartPosition ) * glm::mat4( orientation ) * glm::scale( glm::mat4( 1.0f ), glm::vec3( 0.5f ) );
-
-    _computeAndSendMatrixUniforms( modelMtxAICar, viewMtx, projMtx );
-
-    // Set a distinct color for the AI cart TODO: Identify what color we want the ai cart to be
-    // _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.materialColor, glm::vec3(1.0f, 0.0f, 0.0f));
-
-    _pAICar->draw( modelMtxAICar, viewMtx, projMtx );
 
     // After drawing the cart normally
     float currentAISpeed = _aiSpeed;
@@ -795,7 +801,7 @@ void FPEngine::_renderScene( glm::mat4 viewMtx, glm::mat4 projMtx ) const
         glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 
         // Draw the same geometry for the cart again, but now with speed lines
-        _pAICar->draw( modelMtxAICar, viewMtx, projMtx );
+        //_pAICar->draw( modelMtxAICar, viewMtx, projMtx );
 
         glDisable( GL_BLEND );
     }
