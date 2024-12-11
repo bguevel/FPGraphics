@@ -2,7 +2,6 @@
 #define LAB02_LAB02_ENGINE_H
 
 #include "Car.h"
-#include "FreeCam.h"
 #include <CSCI441/FreeCam.hpp>
 #include <CSCI441/OpenGLEngine.hpp>
 #include <CSCI441/ShaderProgram.hpp>

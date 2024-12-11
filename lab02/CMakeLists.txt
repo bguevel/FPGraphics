@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
-project(lab02)
+project(FP)
 set(CMAKE_CXX_STANDARD 17)
-set(SOURCE_FILES main.cpp FPEngine.cpp FPEngine.h FreeCam.cpp FreeCam.h FirstPerson.hpp Car.cpp Car.h Tree.cpp Tree.h)
+set(SOURCE_FILES main.cpp FPEngine.cpp FPEngine.h Car.cpp Car.h Tree.cpp Tree.h)
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 # Windows with MinGW Installations
