@@ -1,5 +1,5 @@
 Last Lap Studios
-Andrew Bernklau, Edward Gibson - ewgibson@mines.edu, Ben Guevel
+Andrew Bernklau - andrew_bernklau@mines.edu Edward Gibson - ewgibson@mines.edu, Ben Guevel
 FP / The Grey Havens
 
 Description:
