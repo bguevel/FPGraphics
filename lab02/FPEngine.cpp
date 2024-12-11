@@ -785,7 +785,6 @@ void FPEngine::_updateScene( )
             startCheckpoint      = true;
             checkOrder[numOrder] = 0;
             numOrder++;
-            fprintf( stdout, "start\n" );
         }
     }
     if ( !firstCheckpoint )
@@ -795,7 +794,6 @@ void FPEngine::_updateScene( )
             firstCheckpoint      = true;
             checkOrder[numOrder] = 1;
             numOrder++;
-            fprintf( stdout, "1st\n" );
         }
     }
     if ( !secondCheckpoint )
@@ -805,7 +803,6 @@ void FPEngine::_updateScene( )
             secondCheckpoint     = true;
             checkOrder[numOrder] = 2;
             numOrder++;
-            fprintf( stdout, "2nd\n" );
         }
     }
     if ( !thirdCheckpoint )
@@ -815,13 +812,11 @@ void FPEngine::_updateScene( )
             thirdCheckpoint      = true;
             checkOrder[numOrder] = 3;
             numOrder++;
-            fprintf( stdout, "3rd\n" );
         }
     }
 
     if ( numOrder == 4 && ( abs( playerPos.x ) < 5.0f && playerPos.z > 0 ))
     {
-        fprintf( stdout, "Checking\n" );
         numOrder         = 1;
         isReverse        = 1;
         firstCheckpoint  = false;
@@ -829,7 +824,6 @@ void FPEngine::_updateScene( )
         thirdCheckpoint  = false;
         if ( checkOrder[1] == 1 )
             isReverse = 0;
-        fprintf( stdout, "isReverse: %d\n", isReverse );
     }
 
     // Retrieve the terrain height at the plane's current X and Z

@@ -1,4 +1,5 @@
-Last Lap Studios / Andrew Bernklau, Edward Gibson, Ben Guevel
+Last Lap Studios
+Andrew Bernklau, Edward Gibson - ewgibson@mines.edu, Ben Guevel
 FP / The Grey Havens
 
 Description:
@@ -24,7 +25,6 @@ Controls:
 
 Compilation and running
 Command line:
-cd to lab02
 cmake -S . -B build
 cmake --build build
 ./build/FP
@@ -37,7 +37,10 @@ No known bugs that of which are known. Although, the user can drive anywhere on 
 
 Andrew - Added Bezier Curve w/ arc length parameterization for the AI cart and implemented the speed lines with v/g/f shaders.
 Ben - Set up the world by incorporating lighting, skybox, and height mapping.
-Edward - Created cart objects w/ headlights, added textures and objects to the scene, and hid an Easter egg
+Edward - Created cart objects w/ headlights, implemented textures and materials, added objects to the scene, and hid an Easter egg
+
+EASTER EGG:
+In order to access the easter egg, you have to go around the track backwards.
 
 Q1. Several days
 Q2. 10
