@@ -1,9 +1,44 @@
-1) Ben Guevel, bguevel@mines.edu
-2) A4
-3) This program is a "game" that has a camera pointed at the character which is a collection of 3d objects. The camera moves with the character as the character moves through the world. The game has an objective which is to visit all the corners of the map while being chased by rolling balls. If these balls touch you the game closes and displays a message saying the game is over. The balls move constantly towards the player ass their "attraction radius" is larger than the map is. If the character goes off the map it falls slower than the balls do, so it is possible to see the balls fall off the map as well. Once the objective of the game is complete it closes displaying a message saying that the player has won.
-4) The program is run by compiling it then hitting run. The keys of use are w,a,s,d,shift+mouse, and the arrow keys. the movement keys for the character are the w,a,s,d while the camera movement keys are shift+mouse, and the arrow keys.
-5) Ensure you have the correct dependencies and then just compile it.
-6) I am not aware of any bugs currently.
-7) 6 hours
-8) 6
-9) 5
+Last Lap Studios / Andrew Bernklau, Edward Gibson, Ben Guevel
+FP / The Grey Havens
+
+Description:
+This program is a racing game where two players, an AI and the user, race around a track.
+The track is set in a forest area w/ a gravel speedway. The track itself is not entirely flat.
+Height mapping is used to displace the track to various heights adding a decent amount of bumps.
+The AI car follows a series of Bézier curves generated around the track.
+It also changes its direction tangential to it's position on the curves.
+The player moves the cart with 'wasd' keys and after reaching a certain speed, speed lines are generated behind the player car.
+The program allows for the change of many POVs: a fixed POV, an arc ball cam, and a first person view.
+The cars themselves are animated as they drive, the wheels rotate along their 'axles' or when turning they rotate toward that direction.
+
+"Seek the arc where colors play, turn your wheels the other way"
+
+Controls:
+        W A S D - forwards, backwards, and side to side for the character in the world
+        Mouse Drag - Pan camera side to side and up and down
+        Mouse Drag up and down + shift - Zoom camera in and out
+        1 - Fixed POV
+        2 - Arc ball cam
+        3 - First person view
+        Q / ESC - quit
+
+Compilation and running
+Command line:
+cd to lab02
+cmake -S . -B build
+cmake --build build
+./build/FP
+
+Through CLion:
+set target to FP
+build and run
+
+No known bugs that of which are known. Although, the user can drive anywhere on and off the track and collisions are not implemented.
+
+Andrew - Added Bezier Curve w/ arc length parameterization for the AI cart and implemented the speed lines with v/g/f shaders.
+Ben - Set up the world by incorporating lighting, skybox, and height mapping.
+Edward - Created cart objects w/ headlights, added textures and objects to the scene, and hid an Easter egg
+
+Q1. Several days
+Q2. 10
+Q3. 10
