@@ -285,6 +285,12 @@ void FPEngine::mSetupScene( )
     _cams[CAM_ID::FIXED_CAM]->setPhi( 8 * M_PI / 6 );
     _cams[CAM_ID::FIXED_CAM]->recomputeOrientation( );
 
+    _cams[CAM_ID::FPV_CAM] = new CSCI441::FreeCam();
+    _cams[CAM_ID::FPV_CAM]->setPosition(_pPlayerCar->getPosition() + glm::vec3(2.0f,0.0f,0.0f));
+    _cams[CAM_ID::FPV_CAM]->setTheta(-M_PI / 2 );
+    _cams[CAM_ID::FPV_CAM]->setPhi( 3*M_PI / 2 );
+    _cams[CAM_ID::FPV_CAM]->recomputeOrientation( );
+
     camID = CAM_ID::FIXED_CAM;
 
     // TODO #6: set lighting uniforms
@@ -813,7 +819,7 @@ void FPEngine::_updateScene( )
         }
     }
 
-    if ( numOrder == 4 )
+    if ( numOrder == 4 && ( abs( playerPos.x ) < 5.0f && playerPos.z > 0 ))
     {
         fprintf( stdout, "Checking\n" );
         numOrder         = 1;
@@ -849,6 +855,10 @@ void FPEngine::_updateScene( )
         // Switch to arc
         camID = CAM_ID::ARC_CAM;
     }
+    else if (_keys[GLFW_KEY_3])
+    {
+        camID = CAM_ID::FPV_CAM;
+    }
     if ( _keys[GLFW_KEY_W] )
     {
         // Increase player speed until max speed
@@ -867,11 +877,11 @@ void FPEngine::_updateScene( )
     }
     else if ( _keys[GLFW_KEY_S] )
     {
-        _playerSpeed += _playerAcceleration * (float)deltaTime;
-        if ( _playerSpeed < _playerMaxSpeed )
+        _playerSpeed -= _playerAcceleration * (float)deltaTime;
+        if ( _playerSpeed > _playerMaxSpeed )
             _playerSpeed = _playerMaxSpeed;
 
-        _pPlayerCar->moveBackward( _playerSpeed );
+        _pPlayerCar->moveForward( _playerSpeed );
         _pPlayerCar->setForwardDirection( );
 
         if ( !( _pPlayerCar->getPosition( ).x + 0.2f < 100.0f && _pPlayerCar->getPosition( ).z + 0.2f < 100.0f && _pPlayerCar->getPosition( ).x + 0.2f > -100.0f &&
@@ -883,12 +893,12 @@ void FPEngine::_updateScene( )
     else
     {
         // If not pressing W, maybe slow down gradually
-        _playerSpeed -= _playerAcceleration * (float)deltaTime;
         if ( _playerSpeed < 0.0f )
-            _playerSpeed = 0.0f;
-
+            _playerSpeed += _playerAcceleration * (float)deltaTime;
+            _pPlayerCar->moveForward( _playerSpeed );
         if ( _playerSpeed > 0.0f )
         {
+            _playerSpeed -= _playerAcceleration * (float)deltaTime;
             _pPlayerCar->moveForward( _playerSpeed );
             _pPlayerCar->setForwardDirection( );
         }
@@ -904,6 +914,8 @@ void FPEngine::_updateScene( )
             _pPlayerCar->rotateSelf( -0.1f ); // give the axis of travel and whether the axis involves the A key as then we need to inverse the angle
             _pPlayerCar->setForwardDirection( );
             _cams[CAM_ID::FIXED_CAM]->setTheta( _cams[CAM_ID::FIXED_CAM]->getTheta( ) + 0.1f );
+            _cams[CAM_ID::FPV_CAM]->setTheta( _cams[CAM_ID::FPV_CAM]->getTheta( ) + 0.1f );
+
         }
         _pPlayerCar->isTurnRight = true;
     }
@@ -918,6 +930,8 @@ void FPEngine::_updateScene( )
             _pPlayerCar->rotateSelf( 0.1f ); // give the axis of travel and whether the axis involves the A key as then we need to inverse the angle
             _pPlayerCar->setForwardDirection( );
             _cams[CAM_ID::FIXED_CAM]->setTheta( _cams[CAM_ID::FIXED_CAM]->getTheta( ) - 0.1f );
+            _cams[CAM_ID::FPV_CAM]->setTheta( _cams[CAM_ID::FPV_CAM]->getTheta( ) - 0.1f );
+
         }
         _pPlayerCar->isTurnLeft = true;
     }
@@ -926,7 +940,8 @@ void FPEngine::_updateScene( )
         _pPlayerCar->isTurnLeft = false;
     }
     _pPlayerCar->setForwardDirection( );
-    _cams[camID]->setLookAtPoint( _pPlayerCar->getPosition( ) );
+    if(camID != CAM_ID::FPV_CAM) _cams[camID]->setLookAtPoint( _pPlayerCar->getPosition( ) );
+    else _cams[camID]->setPosition(_pPlayerCar->getPosition() + 2.0f * _pPlayerCar->getForwardDirection());
     _cams[camID]->recomputeOrientation( );
     _pPlayerCar->update( );
     _moveSpotlight( );
