@@ -219,12 +219,13 @@ class FPEngine final : public CSCI441::OpenGLEngine
 
         GLint camID{};
 
-        GLint numCams = 2;
+        GLint numCams = 3;
 
         enum CAM_ID
         {
             ARC_CAM   = 0,
             FIXED_CAM = 1,
+            FPV_CAM = 2
         };
 
         struct SpeedLineShaderUniformLocations {

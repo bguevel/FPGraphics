@@ -133,7 +133,8 @@ void FPEngine::mSetupBuffers( )
                            _lightingShaderUniformLocations.materialDiffuse,
                            _lightingShaderUniformLocations.materialSpecular,
                            _lightingShaderUniformLocations.materialShine,
-                           _lightingShaderUniformLocations.isEmitter );
+                           _lightingShaderUniformLocations.isEmitter,
+                           false);
 
     _pAICar = new Car( _lightingShaderProgram->getShaderProgramHandle( ),
                        _lightingShaderUniformLocations.mvpMatrix,
@@ -141,7 +142,8 @@ void FPEngine::mSetupBuffers( )
                        _lightingShaderUniformLocations.materialDiffuse,
                        _lightingShaderUniformLocations.materialSpecular,
                        _lightingShaderUniformLocations.materialShine,
-                       _lightingShaderUniformLocations.isEmitter );
+                       _lightingShaderUniformLocations.isEmitter,
+                       true);
 
     // Load the height map first
     if ( !loadHeightMap( "heightmap.png" ) )
@@ -285,6 +287,12 @@ void FPEngine::mSetupScene( )
     _cams[CAM_ID::FIXED_CAM]->setTheta( M_PI / 2 );
     _cams[CAM_ID::FIXED_CAM]->setPhi( 8 * M_PI / 6 );
     _cams[CAM_ID::FIXED_CAM]->recomputeOrientation( );
+
+    _cams[CAM_ID::FPV_CAM] = new CSCI441::FreeCam();
+    _cams[CAM_ID::FPV_CAM]->setPosition(_pPlayerCar->getPosition() + glm::vec3(2.0f,0.0f,0.0f));
+    _cams[CAM_ID::FPV_CAM]->setTheta(-M_PI / 2 );
+    _cams[CAM_ID::FPV_CAM]->setPhi(3* M_PI / 2 );
+    _cams[CAM_ID::FPV_CAM]->recomputeOrientation( );
 
     camID = CAM_ID::FIXED_CAM;
 
@@ -721,7 +729,7 @@ void FPEngine::_renderScene( glm::mat4 viewMtx, glm::mat4 projMtx ) const
 */
     glm::vec3 _aiCartDirection2 = glm::vec3(_aiCartDirection.x, 0, _aiCartDirection.z);
 
-    fprintf(stdout, "AI X: %f Y: %f Z: %f\n", glm::normalize(_aiCartDirection2).x, glm::normalize(_aiCartDirection2).y,glm::normalize(_aiCartDirection2).z);
+    //fprintf(stdout, "AI X: %f Y: %f Z: %f\n", glm::normalize(_aiCartDirection2).x, glm::normalize(_aiCartDirection2).y,glm::normalize(_aiCartDirection2).z);
     _pAICar->setForwardDirection(glm::normalize(_aiCartDirection2));
 /*
     glm::mat4 orientation( 1.0f );
@@ -921,6 +929,11 @@ void FPEngine::_updateScene( )
         // Switch to arc
         camID = CAM_ID::ARC_CAM;
     }
+    else if (_keys[GLFW_KEY_3])
+    {
+        //Switch to FPV
+        camID = CAM_ID::FPV_CAM;
+    }
     if ( _keys[GLFW_KEY_W] )
     {
         // Increase player speed until max speed
@@ -939,10 +952,16 @@ void FPEngine::_updateScene( )
     }
     else if ( _keys[GLFW_KEY_S] )
     {
-        _playerSpeed += _playerAcceleration * (float)deltaTime;
-        if (_playerSpeed < _playerMaxSpeed) _playerSpeed = _playerMaxSpeed;
+        fprintf(stdout, "Player Speed Before %f\n", _playerSpeed);
+        _playerSpeed -= _playerAcceleration * (float)deltaTime;
+        fprintf(stdout, "Player Speed After %f\n", _playerSpeed);
+        if (_playerSpeed > _playerMaxSpeed)
+        {
+            fprintf(stdout, "HERE\n");
+            _playerSpeed = _playerMaxSpeed;
+        }
 
-        _pPlayerCar->moveBackward( _playerSpeed  );
+        _pPlayerCar->moveForward( _playerSpeed  );
         _pPlayerCar->setForwardDirection( );
 
         if ( !( _pPlayerCar->getPosition( ).x + 0.2f < 100.0f && _pPlayerCar->getPosition( ).z + 0.2f < 100.0f && _pPlayerCar->getPosition( ).x + 0.2f > -100.0f &&
@@ -954,10 +973,12 @@ void FPEngine::_updateScene( )
     else
     {
         // If not pressing W, maybe slow down gradually
-        _playerSpeed -= _playerAcceleration * (float)deltaTime;
-        if (_playerSpeed < 0.0f) _playerSpeed = 0.0f;
-
+        if (_playerSpeed < 0.0f) {
+            _playerSpeed += _playerAcceleration * (float)deltaTime;
+            _pPlayerCar->moveForward(_playerSpeed);
+        }
         if (_playerSpeed > 0.0f) {
+            _playerSpeed -= _playerAcceleration * (float)deltaTime;
             _pPlayerCar->moveForward(_playerSpeed);
             _pPlayerCar->setForwardDirection();
         } else {
@@ -971,6 +992,8 @@ void FPEngine::_updateScene( )
             _pPlayerCar->rotateSelf( -0.1f ); // give the axis of travel and whether the axis involves the A key as then we need to inverse the angle
             _pPlayerCar->setForwardDirection( );
             _cams[CAM_ID::FIXED_CAM]->setTheta( _cams[CAM_ID::FIXED_CAM]->getTheta( ) + 0.1f );
+            _cams[CAM_ID::FPV_CAM]->setTheta( _cams[CAM_ID::FPV_CAM]->getTheta( ) + 0.1f );
+
         }
         _pPlayerCar->isTurnRight = true;
     }
@@ -985,6 +1008,8 @@ void FPEngine::_updateScene( )
             _pPlayerCar->rotateSelf( 0.1f ); // give the axis of travel and whether the axis involves the A key as then we need to inverse the angle
             _pPlayerCar->setForwardDirection( );
             _cams[CAM_ID::FIXED_CAM]->setTheta( _cams[CAM_ID::FIXED_CAM]->getTheta( ) - 0.1f );
+            _cams[CAM_ID::FPV_CAM]->setTheta( _cams[CAM_ID::FPV_CAM]->getTheta( ) - 0.1f );
+
         }
         _pPlayerCar->isTurnLeft = true;
     }
@@ -993,7 +1018,8 @@ void FPEngine::_updateScene( )
         _pPlayerCar->isTurnLeft = false;
     }
     _pPlayerCar->setForwardDirection( );
-    _cams[camID]->setLookAtPoint( _pPlayerCar->getPosition( ) );
+    if (camID != CAM_ID::FPV_CAM)_cams[camID]->setLookAtPoint( _pPlayerCar->getPosition( ) );
+    else _cams[camID]->setPosition(_pPlayerCar->getPosition() + 2.0f * _pPlayerCar->getForwardDirection( ) );
     _cams[camID]->recomputeOrientation( );
     _pPlayerCar->update( );
     _moveSpotlight( );

@@ -7,7 +7,7 @@
 #include <CSCI441/OpenGLUtils.hpp>
 #include <iostream>
 
-Car::Car( GLuint shaderProgramHandle, GLint mvpMtxUniformLocation, GLint normalMtxUniformLocation, GLint materialDiffuseUniformLocation, GLint materialSpecularUniformLocation, GLint materialShineUniformLocation, GLint emitterUniformLocation) {
+Car::Car( GLuint shaderProgramHandle, GLint mvpMtxUniformLocation, GLint normalMtxUniformLocation, GLint materialDiffuseUniformLocation, GLint materialSpecularUniformLocation, GLint materialShineUniformLocation, GLint emitterUniformLocation, GLboolean isAI) {
     _position = glm::vec3( 40.0f, 0.5f, 15.0f );
 
     _shaderProgramHandle                             = shaderProgramHandle;
@@ -31,6 +31,8 @@ Car::Car( GLuint shaderProgramHandle, GLint mvpMtxUniformLocation, GLint normalM
     isTurnRight = false;
 
     wheelRotation = 0.0f;
+
+    this->isAI = isAI;
 
 }
 glm::vec3 Car::getPosition( ) { return _position; }
@@ -66,17 +68,17 @@ bool Car::isFalling() const {
 
 void Car::draw(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
     modelMtx = glm::rotate(modelMtx, float(toRotate-M_PI/2), glm::vec3(0.0f, 1.0f, 0.0f));
-
-    _drawBody(modelMtx, viewMtx, projMtx);
+    glm::mat4 bodyMtx = glm::translate(modelMtx, glm::vec3(0,bounce,0));
+    _drawBody(bodyMtx, viewMtx, projMtx);
     _drawWheels(modelMtx, viewMtx, projMtx);
-    _drawHeadlights(modelMtx, viewMtx, projMtx);
+    _drawHeadlights(bodyMtx, viewMtx, projMtx);
 }
 
 void Car::_drawBody(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
     modelMtx = glm::scale( modelMtx, _scaleBody );
 
     _computeAndSendMatrixUniforms(modelMtx, viewMtx, projMtx);
-    _sendMaterial(CSCI441::Materials::RUBY);
+    _sendMaterial(isAI ? CSCI441::Materials::OBSIDIAN :CSCI441::Materials::RUBY);
     CSCI441::drawSolidCube( 1.0f );
 
     glm::mat4 hoodMtx = glm::translate(modelMtx, glm::vec3(0.0f, -0.25f, -0.75f));
@@ -175,6 +177,16 @@ void Car::update() {
         //fprintf(stdout, "moving\n");
         wheelRotation += 1.0f;
     }
+    if(isUp) {
+        bounce += bounceRate;
+    }
+    else {
+        bounce -= bounceRate;
+    }
+    if (bounce > bounceLimit) isUp = false;
+    if (bounce < -bounceLimit) isUp = true;
+
+
 
 }
 

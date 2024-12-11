@@ -21,7 +21,7 @@ class Car
     /// \param mvpMtxUniformLocation uniform location for the full precomputed MVP matrix
     /// \param normalMtxUniformLocation uniform location for the precomputed Normal matrix
     /// \param materialColorUniformLocation uniform location for the material diffuse color
-    Car( GLuint shaderProgramHandle, GLint mvpMtxUniformLocation, GLint normalMtxUniformLocation,  GLint materialDiffuseUniformLocation, GLint materialSpecularUniformLocation, GLint materialShineUniformLocation, GLint emitterUniformLocation);
+    Car( GLuint shaderProgramHandle, GLint mvpMtxUniformLocation, GLint normalMtxUniformLocation,  GLint materialDiffuseUniformLocation, GLint materialSpecularUniformLocation, GLint materialShineUniformLocation, GLint emitterUniformLocation, GLboolean isAI);
 
     /// \desc draws the model plane for a given MVP matrix
     /// \param modelMtx existing model matrix to apply to plane
@@ -69,6 +69,11 @@ class Car
     GLfloat wheelTurn;
     GLfloat wheelRotation;
 
+    GLfloat bounce = 0.0f;
+    GLboolean isUp = true;
+    GLfloat bounceRate = 0.01f;
+    GLfloat bounceLimit = 0.2f;
+
     GLfloat wheelRotationRate = 30.0f;
 
     /// \desc handle of the shader program to use when drawing the plane
@@ -93,6 +98,7 @@ class Car
     /// \desc angle to rotate our plane at
     GLfloat _rotateAngle;
 
+    GLboolean isAI;
 
     const GLfloat _PI        = glm::pi<float>( );
     const GLfloat _2PI       = glm::two_pi<float>( );
